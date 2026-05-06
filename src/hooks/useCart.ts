@@ -5,6 +5,9 @@ import { useToast } from '@/hooks/use-toast';
 const CART_STORAGE_KEY = 'cart_items';
 
 function getAvailableStock(product: Product, selectedSize: string): number | undefined {
+  if (product.preorderBySize?.[selectedSize] === true || product.preorder === true) {
+    return undefined;
+  }
   if (product.stockBySize && selectedSize in product.stockBySize) {
     return product.stockBySize[selectedSize];
   }
@@ -79,6 +82,11 @@ export function useCart() {
     }
     setItems(prev => {
       const item = prev.find(i => i.id === productId && i.selectedSize === selectedSize);
+      if (item?.preorderBySize?.[selectedSize] === true || item?.preorder === true) {
+        return prev.map(i =>
+          i.id === productId && i.selectedSize === selectedSize ? { ...i, quantity } : i
+        );
+      }
       const maxQty = item?.stockBySize?.[selectedSize];
       const capped = maxQty !== undefined ? Math.min(quantity, maxQty) : quantity;
       if (maxQty !== undefined && quantity > maxQty) {

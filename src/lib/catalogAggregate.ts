@@ -41,7 +41,7 @@ export function merchRowsToRawProducts(rows: MerchLineRow[]): RawProduct[] {
 }
 
 function groupProductsByID(rawProducts: RawProduct[], hideDisabled: boolean): Product[] {
-  const grouped = new Map<string, Product & { _stockBySize: Map<string, number> }>();
+  const grouped = new Map<string, Product & { _stockBySize: Map<string, number>; _preorderBySize: Map<string, boolean> }>();
 
   for (const raw of rawProducts) {
     if (!raw.id) continue;
@@ -54,6 +54,9 @@ function groupProductsByID(rawProducts: RawProduct[], hideDisabled: boolean): Pr
       if (raw.size && raw.quantity) {
         existing._stockBySize.set(raw.size, (existing._stockBySize.get(raw.size) || 0) + raw.quantity);
       }
+      if (raw.size) {
+        existing._preorderBySize.set(raw.size, raw.preorder === true);
+      }
       if (raw.quantity) {
         existing.stock = (existing.stock || 0) + raw.quantity;
       }
@@ -62,7 +65,9 @@ function groupProductsByID(rawProducts: RawProduct[], hideDisabled: boolean): Pr
     } else {
       const images = [raw.image1, raw.image2, raw.image3, raw.image4].filter(Boolean);
       const stockMap = new Map<string, number>();
+      const preorderMap = new Map<string, boolean>();
       if (raw.size && raw.quantity) stockMap.set(raw.size, raw.quantity);
+      if (raw.size) preorderMap.set(raw.size, raw.preorder === true);
 
       grouped.set(raw.id, {
         id: raw.id,
@@ -75,15 +80,17 @@ function groupProductsByID(rawProducts: RawProduct[], hideDisabled: boolean): Pr
         sizes: raw.size ? [raw.size] : [],
         stock: raw.quantity || 0,
         _stockBySize: stockMap,
+        _preorderBySize: preorderMap,
         preorder: raw.preorder,
         disabled: raw.disabled || undefined,
       });
     }
   }
 
-  let list = Array.from(grouped.values()).map(({ _stockBySize, ...product }) => ({
+  let list = Array.from(grouped.values()).map(({ _stockBySize, _preorderBySize, ...product }) => ({
     ...product,
     stockBySize: Object.fromEntries(_stockBySize),
+    preorderBySize: Object.fromEntries(_preorderBySize),
   }));
 
   if (hideDisabled) list = list.filter((p) => !p.disabled);

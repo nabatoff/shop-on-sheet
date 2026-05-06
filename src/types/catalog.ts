@@ -10,6 +10,7 @@ export interface Product {
   stock?: number;
   stockBySize?: Record<string, number>;
   preorder?: boolean;
+  preorderBySize?: Record<string, boolean>;
   disabled?: boolean;
 }
 

@@ -2,6 +2,7 @@ export interface SizeQuantity {
   size: string;
   quantity: number;
   enabled: boolean;
+  preorder?: boolean;
   quantitySet?: number;
 }
 

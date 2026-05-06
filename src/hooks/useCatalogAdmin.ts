@@ -99,7 +99,7 @@ export function useCatalogAdmin() {
       image4: product.image4,
       capsule: product.capsule,
       description: product.description,
-      preorder: product.preorder,
+      preorder: sizeData.preorder === true || product.preorder === true,
       disabled,
     }));
   };
@@ -112,7 +112,8 @@ export function useCatalogAdmin() {
     try {
       const enabledSizes = product.sizes.filter((s) => s.enabled);
       const hasQuantity = enabledSizes.some((s) => s.quantity > 0);
-      const isPreorder = product.preorder === true;
+      const hasPreorderSize = enabledSizes.some((s) => s.preorder === true);
+      const isPreorder = product.preorder === true || hasPreorderSize;
       const isNoSize = product.noSizeQuantity != null;
 
       if (!isNoSize && enabledSizes.length === 0) {
@@ -129,7 +130,7 @@ export function useCatalogAdmin() {
 
       const rows = isPreorder || isNoSize
         ? createProductRows(product)
-        : createProductRows(product).filter((p) => p.quantity > 0);
+        : createProductRows(product).filter((p) => p.quantity > 0 || p.preorder === true);
 
       if (rows.length === 0) {
         setError(isNoSize ? 'Укажите остаток (0 или больше)' : 'Укажите количество > 0 хотя бы для одного размера');

@@ -35,6 +35,10 @@ function stockForSize(product: Product, size: string): number | undefined {
   return product.stockBySize?.[size];
 }
 
+function preorderForSize(product: Product, size: string): boolean {
+  return product.preorderBySize?.[size] === true;
+}
+
 // Tiny 1x1 gray pixel for blur placeholder
 const BLUR_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNlNWU3ZWIiLz48L3N2Zz4=';
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400&h=400&fit=crop';
@@ -68,7 +72,8 @@ function ProductCardInner({ product, onAddToCart }: ProductCardProps) {
   };
 
   const selectedStock = stockForSize(product, selectedSize);
-  const canAddSelected = product.preorder || selectedStock === undefined || selectedStock > 0;
+  const selectedPreorder = preorderForSize(product, selectedSize);
+  const canAddSelected = product.preorder || selectedPreorder || selectedStock === undefined || selectedStock > 0;
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -202,7 +207,7 @@ function ProductCardInner({ product, onAddToCart }: ProductCardProps) {
         <h3 className="font-medium text-card-foreground text-sm md:text-base truncate mb-0.5">{product.name}</h3>
         <div className="flex items-center gap-2">
           <span className="font-bold text-card-foreground text-sm md:text-base">{formatPrice(product.price)}</span>
-          {product.preorder && (
+          {(product.preorder || selectedPreorder) && (
             <span className="text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded bg-amber-500 text-white">
               Под заказ
             </span>
@@ -224,7 +229,7 @@ function ProductCardInner({ product, onAddToCart }: ProductCardProps) {
           <div className="flex flex-wrap gap-1.5">
             {product.sizes.map((size) => {
               const sizeStock = stockForSize(product, size);
-              const outOfStock = sizeStock !== undefined && sizeStock <= 0;
+              const outOfStock = !preorderForSize(product, size) && sizeStock !== undefined && sizeStock <= 0;
               return (
                 <button
                   key={size}

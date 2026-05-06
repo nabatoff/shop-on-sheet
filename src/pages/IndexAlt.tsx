@@ -680,16 +680,17 @@ function ProductCard({
   const { toast } = useToast();
   
   const stockForSize = (size: string) => product.stockBySize?.[size] ?? 0;
+  const preorderForSize = (size: string) => product.preorderBySize?.[size] === true;
   const availableSizes = product.preorder
     ? product.sizes
-    : product.sizes.filter(s => stockForSize(s) > 0);
+    : product.sizes.filter(s => stockForSize(s) > 0 || preorderForSize(s));
   
   const handleAddToCart = () => {
     if (product.sizes.length > 0 && !selectedSize) {
       toast({ title: 'Выберите размер', variant: 'destructive' });
       return;
     }
-    if (!product.preorder && selectedSize && stockForSize(selectedSize) <= 0) {
+    if (!product.preorder && selectedSize && !preorderForSize(selectedSize) && stockForSize(selectedSize) <= 0) {
       toast({ title: 'Нет в наличии', variant: 'destructive' });
       return;
     }
@@ -813,7 +814,7 @@ function ProductCard({
           >
             {product.price.toLocaleString('ru-RU')} ₸
           </p>
-          {product.preorder && (
+          {(product.preorder || (selectedSize ? preorderForSize(selectedSize) : false)) && (
             <span 
               className="text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded text-white"
               style={{ backgroundColor: BRAND_COLOR }}
@@ -860,7 +861,7 @@ function ProductCard({
               <SelectContent>
                 {product.sizes.map(size => {
                   const stock = stockForSize(size);
-                  const outOfStock = !product.preorder && stock <= 0;
+                  const outOfStock = !product.preorder && !preorderForSize(size) && stock <= 0;
                   return (
                     <SelectItem 
                       key={size} 
@@ -868,7 +869,7 @@ function ProductCard({
                       disabled={outOfStock}
                       className={outOfStock ? 'text-gray-300 line-through' : ''}
                     >
-                      {size} {outOfStock ? '(нет в наличии)' : ''}
+                      {size} {preorderForSize(size) ? '(под заказ)' : outOfStock ? '(нет в наличии)' : ''}
                     </SelectItem>
                   );
                 })}
@@ -985,11 +986,24 @@ function CapsuleProductSection({
 const IndexAlt = () => {
   const { data, loading, error, refetch } = useCatalog();
   const cart = useCart();
+  const [forceHideSplash, setForceHideSplash] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedCapsule, setSelectedCapsule] = useState<string | null>(null);
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  useEffect(() => {
+    if (!loading) {
+      setForceHideSplash(false);
+      return;
+    }
+
+    // Никогда не держим полноэкранный прелоадер бесконечно:
+    // при долгой сети даем пользователю доступ к странице.
+    const timer = setTimeout(() => setForceHideSplash(true), 8000);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   const { categories, sizes } = useMemo(() => {
     if (!data) return { categories: [], sizes: [] };
@@ -1096,7 +1110,7 @@ const IndexAlt = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {loading && <AltLoadingScreen />}
+      {loading && !forceHideSplash && <AltLoadingScreen />}
 
       <AltHeader cartCount={cart.totalItems} onCartClick={cart.toggleCart} />
 

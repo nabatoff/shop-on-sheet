@@ -31,7 +31,7 @@ const DEFAULT_CATEGORIES = [
 const DEFAULT_SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', 'one size', 'унисекс'];
 
 const createInitialSizes = (allSizes: string[]): SizeQuantity[] => 
-  allSizes.map(size => ({ size, quantity: 0, enabled: false }));
+  allSizes.map(size => ({ size, quantity: 0, enabled: false, preorder: false }));
 
 const createInitialFormData = (allSizes: string[]): ProductFormData => ({
   id: '',
@@ -239,6 +239,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
             size,
             quantity: 0,
             enabled: productSizes.includes(size),
+            preorder: productToEdit.preorderBySize?.[size] === true,
             quantitySet: undefined,
           })),
           price: productToEdit.price,
@@ -274,6 +275,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
               size,
               quantity: stockBySize[size] || 0,
               enabled: productSizes.includes(size),
+              preorder: productToEdit.preorderBySize?.[size] === true,
             })),
             price: productToEdit.price,
             image1: productToEdit.images[0] || '',
@@ -321,7 +323,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
     setFormData(prev => ({
       ...prev,
       sizes: prev.sizes.map((s, i) => 
-        i === sizeIndex ? { ...s, enabled, quantity: enabled ? (s.quantity || 1) : 0 } : s
+        i === sizeIndex ? { ...s, enabled, quantity: enabled ? (s.quantity || 1) : 0, preorder: enabled ? (s.preorder ?? false) : false } : s
       )
     }));
   };
@@ -340,6 +342,15 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
       ...prev,
       sizes: prev.sizes.map((s, i) => 
         i === sizeIndex ? { ...s, quantitySet: value === undefined ? undefined : Math.max(0, value) } : s
+      )
+    }));
+  };
+
+  const handleSizePreorderToggle = (sizeIndex: number, preorder: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      sizes: prev.sizes.map((s, i) =>
+        i === sizeIndex ? { ...s, preorder } : s
       )
     }));
   };
@@ -505,10 +516,11 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
     }
     if (!isNoSize && mode === 'add' && !formData.preorder) {
       const sizesWithQty = enabledSizes.filter(s => s.quantity > 0);
-      if (sizesWithQty.length === 0) {
+      const preorderSizes = enabledSizes.filter((s) => s.preorder === true);
+      if (sizesWithQty.length === 0 && preorderSizes.length === 0) {
         toast({
           title: 'Ошибка',
-          description: 'Укажите количество > 0 хотя бы для одного размера',
+          description: 'Укажите количество > 0 или включите «Под заказ» хотя бы для одного размера',
           variant: 'destructive',
         });
         return;
@@ -545,13 +557,16 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
             sizes: [],
             stock: formData.noSizeQuantity ?? 0,
             stockBySize: {},
+            preorderBySize: {},
             preorder: formData.preorder,
             disabled: formData.disabled,
           }
         : (() => {
             const stockBySize: Record<string, number> = {};
+            const preorderBySize: Record<string, boolean> = {};
             enabledSizes.forEach(s => {
               stockBySize[s.size] = s.quantity;
+              preorderBySize[s.size] = s.preorder === true;
             });
             return {
               id: formData.id,
@@ -563,7 +578,8 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
               description: formData.description,
               sizes: enabledSizes.map(s => s.size),
               stockBySize,
-              preorder: formData.preorder,
+              preorderBySize,
+              preorder: formData.preorder || enabledSizes.some((s) => s.preorder === true),
               disabled: formData.disabled,
             };
           })();
@@ -830,7 +846,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
                         onChange={(e) => handleChange('preorder', e.target.checked)}
                         className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
                       />
-                      <span className="text-sm text-gray-700 font-medium">Под заказ</span>
+                      <span className="text-sm text-gray-700 font-medium">Под заказ (для товара без размера)</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer h-10 ml-4">
                       <input
@@ -921,6 +937,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
                         {mode === 'edit' && <TableHead className="text-gray-800 font-semibold">Сейчас</TableHead>}
                         <TableHead className="text-gray-800 font-semibold">{mode === 'edit' ? 'Добавить (шт.)' : 'Кол-во'}</TableHead>
                         {mode === 'edit' && <TableHead className="text-gray-800 font-semibold">Остаток (установить)</TableHead>}
+                        <TableHead className="text-gray-800 font-semibold">Под заказ</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -981,6 +998,15 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
                               )}
                             </TableCell>
                           )}
+                          <TableCell className="py-2">
+                            {sizeData.enabled && (
+                              <Checkbox
+                                checked={sizeData.preorder === true}
+                                onCheckedChange={(checked) => handleSizePreorderToggle(index, checked === true)}
+                                className="border-gray-300 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                              />
+                            )}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
