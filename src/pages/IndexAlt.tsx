@@ -860,7 +860,7 @@ function ProductCard({
               <SelectContent>
                 {product.sizes.map(size => {
                   const stock = stockForSize(size);
-                  const outOfStock = stock <= 0;
+                  const outOfStock = !product.preorder && stock <= 0;
                   return (
                     <SelectItem 
                       key={size} 

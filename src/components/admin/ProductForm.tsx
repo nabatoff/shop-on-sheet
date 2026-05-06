@@ -88,7 +88,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
       DEFAULT_SIZES.forEach(s => sizes.add(s));
     }
 
-    // Добавляем категории и капсулы из существующих товаров (на случай если не синхронизированы)
+    // Добавляем категории/капсулы/размеры из существующих товаров (на случай если не синхронизированы)
     existingProducts.forEach(p => {
       if (p.category) {
         const normalized = p.category.trim();
@@ -98,7 +98,22 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
         const normalized = p.capsule.trim();
         if (normalized) capsules.add(normalized);
       }
+      if (Array.isArray(p.sizes)) {
+        p.sizes.forEach((size) => {
+          const normalized = String(size || '').trim();
+          if (normalized) sizes.add(normalized);
+        });
+      }
     });
+
+    // При редактировании товар может содержать размеры, которых уже нет в справочнике catalog_sizes.
+    // Их обязательно сохраняем в сетке, иначе при "Сохранить" можно случайно удалить строки/остатки.
+    if (productToEdit?.sizes?.length) {
+      productToEdit.sizes.forEach((size) => {
+        const normalized = String(size || '').trim();
+        if (normalized) sizes.add(normalized);
+      });
+    }
 
     // Сортировка размеров
     const SIZE_ORDER = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '2XL', '3XL', '4XL', '5XL'];
@@ -121,7 +136,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
       capsuleOptions: Array.from(capsules).sort((a, b) => a.localeCompare(b, 'ru')),
       sizeOptions: sortedSizes,
     };
-  }, [existingProducts, sheetCategories, sheetSizes, sheetCapsules]);
+  }, [existingProducts, sheetCategories, sheetSizes, sheetCapsules, productToEdit]);
 
   // Используем размеры из листа (или дефолтные)
   const allSizes = sizeOptions;
@@ -292,7 +307,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
         }
       }
     }
-  }, [open, mode, productToEdit, generateNewId]);
+  }, [open, mode, productToEdit, generateNewId, sizeOptions]);
 
   const handleChange = (field: keyof ProductFormData, value: string | number | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

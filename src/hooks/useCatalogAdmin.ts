@@ -193,79 +193,31 @@ export function useCatalogAdmin() {
             };
           });
 
-      const requestedSizes = new Set(productsPayload.map((p) => String(p.size ?? '').trim()));
+      const rpcRows = productsPayload.map((prod) => ({
+        ...snakeInsert(prod),
+        quantity: Number(prod.quantity) || 0,
+        set_quantity: prod.setQuantity === true,
+      }));
 
-      const { data: existing, error: selErr } = await sb
-        .from('merch_lines')
-        .select('*')
-        .eq('product_id', product.id);
+      const { data: rpcData, error: rpcErr } = await sb.rpc('update_merch_product_atomic', {
+        p_product_id: product.id,
+        p_rows: rpcRows,
+      });
 
-      if (selErr) {
-        setError(selErr.message);
+      if (rpcErr) {
+        setError(rpcErr.message);
+        await adminLog('Обновление товара', rpcErr.message, 'Ошибка');
         return false;
       }
 
-      const existingRows = (existing || []) as MerchLineRow[];
-      const toDeleteIds = existingRows
-        .filter((er) => !requestedSizes.has(String(er.size ?? '').trim()))
-        .map((er) => er.id);
-
-      if (toDeleteIds.length > 0) {
-        const { error: delErr } = await sb.from('merch_lines').delete().in('id', toDeleteIds);
-        if (delErr) {
-          setError(delErr.message);
-          return false;
-        }
-      }
-
-      const { data: afterDel } = await sb.from('merch_lines').select('*').eq('product_id', product.id);
-      const mapBySize = new Map<string, MerchLineRow>();
-      for (const er of (afterDel || []) as MerchLineRow[]) {
-        mapBySize.set(String(er.size ?? '').trim(), er);
-      }
-
-      let updated = 0;
-      let added = 0;
-
-      for (const prod of productsPayload) {
-        const sizeKey = String(prod.size ?? '').trim();
-        const existingRow = mapBySize.get(sizeKey);
-        const addQty = Number(prod.quantity) || 0;
-        const snake = snakeInsert(prod);
-
-        if (existingRow) {
-          const setQty = prod.setQuantity === true;
-          const newQty = setQty ? addQty : (existingRow.quantity || 0) + addQty;
-          const { error: upErr } = await sb
-            .from('merch_lines')
-            .update({
-              ...snake,
-              quantity: newQty,
-            })
-            .eq('id', existingRow.id);
-          if (upErr) {
-            setError(upErr.message);
-            await adminLog('Обновление товара', upErr.message, 'Ошибка');
-            return false;
-          }
-          updated++;
-        } else {
-          const { error: insErr } = await sb.from('merch_lines').insert({
-            ...snake,
-            quantity: addQty,
-          });
-          if (insErr) {
-            setError(insErr.message);
-            await adminLog('Обновление товара', insErr.message, 'Ошибка');
-            return false;
-          }
-          added++;
-        }
-      }
+      const stats = (rpcData || {}) as { updated?: number; added?: number; deleted?: number };
+      const updated = Number(stats.updated || 0);
+      const added = Number(stats.added || 0);
+      const deleted = Number(stats.deleted || 0);
 
       await adminLog(
         'Обновление товара',
-        `ID: ${product.id}, Название: ${product.name}, Обновлено: ${updated}, Добавлено: ${added}`,
+        `ID: ${product.id}, Название: ${product.name}, Обновлено: ${updated}, Добавлено: ${added}, Удалено: ${deleted}`,
         'Успех',
       );
       return true;
