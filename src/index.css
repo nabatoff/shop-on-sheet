@@ -1,0 +1,315 @@
+/* Google Fonts now loaded via index.html <link> to avoid render-blocking @import */
+
+/* Montserrat font - локальный файл с поддержкой кириллицы */
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/fonts/Montserrat-Regular-Cyrillic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Neue Machina font - локальный файл */
+@font-face {
+  font-family: 'Neue Machina';
+  src: url('/fonts/NeueMachina-Regular.woff2') format('woff2'),
+       url('/fonts/NeueMachina-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Corporate Merch Catalog Design System - Blue & White theme */
+
+@layer base {
+  :root {
+    --background: 218 99% 37%;
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 218 99% 37%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 218 60% 70%;
+    --muted-foreground: 218 30% 85%;
+
+    --accent: 218 90% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 30% 85%;
+    --input: 220 30% 90%;
+    --ring: 221 83% 53%;
+
+    --radius: 1rem;
+
+    /* Custom catalog tokens */
+    --catalog-bg: 218 99% 37%;
+    --catalog-hero: 218 99% 32%;
+    --catalog-card: 0 0% 100%;
+    --catalog-card-hover: 220 14% 98%;
+    --catalog-tag: 218 80% 45%;
+    --catalog-tag-foreground: 0 0% 100%;
+    --catalog-price: 222 47% 11%;
+    --catalog-title: 220 20% 50%;
+    --catalog-badge: 45 93% 47%;
+
+    --whatsapp: 142 76% 36%;
+    --whatsapp-foreground: 0 0% 100%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 0 0% 98%;
+
+    --card: 222 47% 15%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 222 47% 15%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 17%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 213 27% 84%;
+
+    --catalog-bg: 222 47% 11%;
+    --catalog-hero: 222 47% 15%;
+    --catalog-card: 222 47% 18%;
+    --catalog-card-hover: 222 47% 22%;
+    --catalog-tag: 217 70% 45%;
+    --catalog-tag-foreground: 0 0% 100%;
+    --catalog-price: 0 0% 98%;
+    --catalog-title: 220 20% 70%;
+    --catalog-badge: 45 93% 47%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-size: 15px; /* Уменьшаем базовый размер шрифта (было 16px) */
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Montserrat', system-ui, sans-serif;
+  }
+
+  @media (min-width: 1024px) {
+    html {
+      font-size: 15px;
+    }
+  }
+
+  @media (min-width: 1440px) {
+    html {
+      font-size: 16px;
+    }
+  }
+}
+
+@layer components {
+  .catalog-gradient {
+    background: linear-gradient(180deg, hsl(var(--catalog-hero)) 0%, hsl(var(--catalog-bg)) 100%);
+  }
+  
+  .product-card {
+    @apply bg-card rounded-2xl overflow-hidden transition-all duration-300;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+  
+  .product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  }
+  
+  .category-tag {
+    @apply inline-flex items-center px-6 py-2 rounded-full text-sm font-medium;
+    background: hsl(var(--catalog-tag) / 0.9);
+    color: hsl(var(--catalog-tag-foreground));
+    backdrop-filter: blur(8px);
+  }
+  
+  .capsule-title {
+    background: linear-gradient(90deg, hsl(220 20% 60%) 0%, hsl(0 0% 100%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .cart-badge {
+    @apply absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold;
+    background: hsl(var(--catalog-badge));
+    color: hsl(222 47% 11%);
+  }
+
+  .font-machina {
+    font-family: 'Neue Machina', 'Space Grotesk', system-ui, sans-serif;
+  }
+
+  .font-montserrat {
+    font-family: 'Montserrat', system-ui, sans-serif;
+  }
+
+  /* Liquid glass effect for category labels */
+  .liquid-glass {
+    backdrop-filter: blur(20px);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 
+      0 8px 32px rgba(255, 255, 255, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+  }
+}
+
+@layer utilities {
+  /* Floating animation */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+
+  /* Slow spin animation for rotating badge */
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin-slow {
+    animation: spin-slow 15s linear infinite;
+  }
+
+  /* Scroll animations */
+  @keyframes slide-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-40px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes scale-in-up {
+    from {
+      opacity: 0;
+      transform: scale(0.9) translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-in-left {
+    animation: slide-in-left 0.6s ease-out forwards;
+  }
+
+  .animate-scale-in-up {
+    animation: scale-in-up 0.5s ease-out forwards;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.5s ease-out forwards;
+  }
+
+  /* Initial state for scroll animations */
+  .scroll-hidden {
+    opacity: 0;
+  }
+
+  /* Shimmer for loading skeletons */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted-foreground) / 0.3) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+}
