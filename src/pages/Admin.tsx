@@ -19,6 +19,8 @@ import { Product } from '@/types/catalog';
 import { useToast } from '@/hooks/use-toast';
 
 const AUTH_CHECK_TIMEOUT_MS = 7000;
+const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 часов
+const ADMIN_SESSION_STORAGE_KEY = 'admin_session_trusted_at';
 
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -33,6 +35,34 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
         reject(error);
       });
   });
+}
+
+function markAdminSessionTrusted() {
+  try {
+    localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, String(Date.now()));
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearAdminSessionTrusted() {
+  try {
+    localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function isAdminSessionTrusted(ttlMs: number): boolean {
+  try {
+    const raw = localStorage.getItem(ADMIN_SESSION_STORAGE_KEY);
+    if (!raw) return false;
+    const ts = Number(raw);
+    if (!Number.isFinite(ts)) return false;
+    return Date.now() - ts <= ttlMs;
+  } catch {
+    return false;
+  }
 }
 
 async function loadIsAdmin(): Promise<boolean> {
@@ -131,20 +161,32 @@ export default function Admin() {
   useEffect(() => {
     let cancelled = false;
     let subscription: { unsubscribe: () => void } | undefined;
+    const hasTrustedSession = isAdminSessionTrusted(ADMIN_SESSION_TTL_MS);
+
+    if (hasTrustedSession) {
+      setIsAuthenticated(true);
+      setAuthChecked(true);
+    }
 
     (async () => {
       try {
         const ok = await loadIsAdmin();
-        if (!cancelled && ok) setIsAuthenticated(true);
+        if (cancelled) return;
+        if (ok) {
+          setIsAuthenticated(true);
+          markAdminSessionTrusted();
+        } else {
+          clearAdminSessionTrusted();
+          setIsAuthenticated(false);
+        }
       } catch {
-        // Если auth проверка подвисла/упала, не блокируем экран бесконечно.
-        try {
-          await getSupabase().auth.signOut({ scope: 'local' });
-        } catch {
-          /* ignore */
+        // На сетевых/временных сбоях не выбрасываем из админки, если есть доверенная сессия по TTL.
+        if (!hasTrustedSession) {
+          clearAdminSessionTrusted();
+          setIsAuthenticated(false);
         }
       } finally {
-        if (!cancelled) setAuthChecked(true);
+        if (!cancelled && !hasTrustedSession) setAuthChecked(true);
       }
     })();
 
@@ -152,14 +194,21 @@ export default function Admin() {
       const sb = getSupabase();
       const { data } = sb.auth.onAuthStateChange(async (_evt, session) => {
         if (!session?.user) {
+          clearAdminSessionTrusted();
           setIsAuthenticated(false);
           return;
         }
         try {
           const ok = await loadIsAdmin();
+          if (ok) markAdminSessionTrusted();
+          else clearAdminSessionTrusted();
           setIsAuthenticated(ok);
         } catch {
-          setIsAuthenticated(false);
+          // Если уже есть доверенная сессия, не роняем UI из-за кратковременного сбоя сети.
+          if (!isAdminSessionTrusted(ADMIN_SESSION_TTL_MS)) {
+            clearAdminSessionTrusted();
+            setIsAuthenticated(false);
+          }
         }
       });
       subscription = data.subscription;
@@ -174,6 +223,7 @@ export default function Admin() {
   }, []);
 
   const handleLogout = async () => {
+    clearAdminSessionTrusted();
     await getSupabase().auth.signOut();
     setIsAuthenticated(false);
   };
@@ -280,7 +330,14 @@ export default function Admin() {
   }
 
   if (!isAuthenticated) {
-    return <AdminAuth onAuthenticated={() => setIsAuthenticated(true)} />;
+    return (
+      <AdminAuth
+        onAuthenticated={() => {
+          markAdminSessionTrusted();
+          setIsAuthenticated(true);
+        }}
+      />
+    );
   }
 
   return (
