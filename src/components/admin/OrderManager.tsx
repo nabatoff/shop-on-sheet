@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, ShoppingCart, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getSupabase } from '@/lib/supabase';
-import { formatUtcOrderDisplay, generateOrderIdUtc } from '@/lib/orderId';
 import type { Product } from '@/types/catalog';
 
 interface OrderItem {
@@ -242,12 +241,12 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
         productName: it.productName.trim(),
         size: it.size.trim(),
       }))
-      .filter((it) => it.productId && it.quantity > 0);
+      .filter((it) => it.productId && it.productName && it.size && it.quantity > 0);
 
     if (items.length === 0) {
       toast({
         title: 'Нет позиций',
-        description: 'Добавьте хотя бы одну позицию с ID товара, размером и количеством',
+        description: 'Добавьте хотя бы одну позицию с ID, названием, размером и количеством',
         variant: 'destructive',
       });
       return;
@@ -256,33 +255,26 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
     setIsCreating(true);
     try {
       const sb = getSupabase();
-      const orderId = generateOrderIdUtc(phone);
-      const total = items.reduce((s, it) => s + it.quantity * it.price, 0);
-      const now = new Date();
-      const { error: oErr } = await sb.from('orders').insert({
-        order_id: orderId,
-        created_at_display: formatUtcOrderDisplay(now),
-        customer_name: name,
-        customer_phone: phone,
-        status: 'Новый',
-        total,
+      const { data, error } = await sb.rpc('create_manual_order', {
+        p_customer_name: name,
+        p_customer_phone: phone,
+        p_items: items.map((it) => ({
+          productId: it.productId,
+          productName: it.productName,
+          size: it.size,
+          quantity: it.quantity,
+          price: it.price,
+        })),
       });
-      if (oErr) throw oErr;
-
-      const lines = items.map((it) => ({
-        order_id: orderId,
-        product_id: it.productId,
-        product_name: it.productName,
-        size: it.size,
-        quantity: it.quantity,
-        price: it.price,
-      }));
-      const { error: iErr } = await sb.from('order_items').insert(lines);
-      if (iErr) throw iErr;
+      if (error) throw error;
+      const row = (data || {}) as { result?: string; error?: string; orderId?: string };
+      if (row.result !== 'success') {
+        throw new Error(row.error || 'Не удалось создать заказ');
+      }
 
       toast({
         title: 'Заказ создан',
-        description: `OrderId: ${orderId}`,
+        description: `OrderId: ${row.orderId || '—'}`,
       });
       setManualName('');
       setManualPhone('');

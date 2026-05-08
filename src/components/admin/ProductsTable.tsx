@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Product } from '@/types/catalog';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
@@ -179,7 +179,7 @@ export function ProductsTable({
   }, [filteredAndSortedProducts, currentPage, itemsPerPage]);
 
   // Сброс страницы при изменении фильтров (но НЕ при изменении itemsPerPage)
-  useMemo(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearchQuery, capsuleFilter, categoryFilter, sizeFilter, statusFilter]);
 

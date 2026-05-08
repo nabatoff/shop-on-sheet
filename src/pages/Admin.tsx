@@ -7,7 +7,6 @@ import { SizeManager } from '@/components/admin/SizeManager';
 import { CapsuleManager } from '@/components/admin/CapsuleManager';
 import { LogViewer } from '@/components/admin/LogViewer';
 import { OrderManager } from '@/components/admin/OrderManager';
-import { useCatalog } from '@/hooks/useCatalog';
 import { useCatalogAdmin } from '@/hooks/useCatalogAdmin';
 import type { CapsuleData, ImportRow } from '@/types/admin';
 import { getSupabase } from '@/lib/supabase';
@@ -88,9 +87,11 @@ async function loadIsAdmin(): Promise<boolean> {
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-  const { data, loading, error, refetch, dataUpdatedAt } = useCatalog();
   const { deleteProduct, toggleDisabled, bulkImport, fetchProducts, fetchCategories, fetchSizes, fetchCapsules, fetchLogs, clearLogs } = useCatalogAdmin();
   const { toast } = useToast();
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | undefined>(undefined);
   
   // Локальный список товаров для оптимистичного обновления
   const [localProducts, setLocalProducts] = useState<Product[]>([]);
@@ -112,46 +113,33 @@ export default function Admin() {
   // Заказы
   const [ordersOpen, setOrdersOpen] = useState(false);
   
+  const loadAdminData = useCallback(async () => {
+    setAdminLoading(true);
+    setAdminError(null);
+    try {
+      const [products, cats, s, caps] = await Promise.all([
+        fetchProducts(),
+        fetchCategories(),
+        fetchSizes(),
+        fetchCapsules(),
+      ]);
+      setLocalProducts(products);
+      setCategories(cats.sort((a, b) => a.localeCompare(b, 'ru')));
+      setSizes(s);
+      setCapsules(caps.sort((a, b) => a.name.localeCompare(b.name, 'ru')));
+      setLastUpdatedAt(Date.now());
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Не удалось загрузить данные админки';
+      setAdminError(message);
+    } finally {
+      setAdminLoading(false);
+    }
+  }, [fetchProducts, fetchCategories, fetchSizes, fetchCapsules]);
+
   useEffect(() => {
     if (!isAuthenticated) return;
-    let cancelled = false;
-    fetchProducts().then((products) => {
-      if (!cancelled && products.length > 0) setLocalProducts(products);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated, fetchProducts]);
-
-  useEffect(() => {
-    if (data?.products && data.products.length > 0 && localProducts.length === 0) {
-      setLocalProducts(data.products);
-    }
-  }, [data?.products, localProducts.length]);
-
-  useEffect(() => {
-    const loadCategories = async () => {
-      const cats = await fetchCategories();
-      setCategories(cats.sort((a, b) => a.localeCompare(b, 'ru')));
-    };
-    loadCategories();
-  }, [fetchCategories]);
-  
-  useEffect(() => {
-    const loadSizes = async () => {
-      const s = await fetchSizes();
-      setSizes(s);
-    };
-    loadSizes();
-  }, [fetchSizes]);
-  
-  useEffect(() => {
-    const loadCapsules = async () => {
-      const caps = await fetchCapsules();
-      setCapsules(caps.sort((a, b) => a.name.localeCompare(b.name, 'ru')));
-    };
-    loadCapsules();
-  }, [fetchCapsules]);
+    loadAdminData();
+  }, [isAuthenticated, loadAdminData]);
   
   // Состояние модального окна
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -229,9 +217,7 @@ export default function Admin() {
   };
 
   const handleRefresh = async () => {
-    const products = await fetchProducts();
-    if (products.length > 0) setLocalProducts(products);
-    else refetch();
+    await loadAdminData();
   };
 
   // Открыть модалку для добавления
@@ -309,8 +295,8 @@ export default function Admin() {
       });
       // Актуальные строки merch_lines после импорта
       const products = await fetchProducts();
-      if (products.length > 0) setLocalProducts(products);
-      else setTimeout(() => refetch(), 1000);
+      setLocalProducts(products);
+      setLastUpdatedAt(Date.now());
     } else {
       toast({
         title: 'Ошибка импорта',
@@ -431,10 +417,10 @@ export default function Admin() {
       {/* Content */}
       <main className="container mx-auto px-4 py-6">
         {/* Таблица товаров */}
-        {error ? (
+        {adminError ? (
           <Card className="bg-white border-gray-200">
             <CardContent className="p-8 text-center space-y-3">
-              <p className="text-red-500">{error}</p>
+              <p className="text-red-500">{adminError}</p>
               <p className="text-sm text-gray-500 max-w-md mx-auto">
                 Проверьте <code className="bg-gray-100 px-1 rounded">VITE_SUPABASE_URL</code>,{' '}
                 <code className="bg-gray-100 px-1 rounded">VITE_SUPABASE_ANON_KEY</code> и миграции в Supabase.
@@ -444,7 +430,7 @@ export default function Admin() {
         ) : (
           <ProductsTable
             products={localProducts}
-            loading={loading}
+            loading={adminLoading}
             onRefresh={handleRefresh}
             onAddProduct={handleAddProduct}
             onEditProduct={handleEditProduct}
@@ -452,7 +438,7 @@ export default function Admin() {
             onDeleteProduct={handleDeleteProduct}
             onToggleDisabled={handleToggleDisabled}
             onImport={handleImport}
-            lastUpdatedAt={dataUpdatedAt}
+            lastUpdatedAt={lastUpdatedAt}
           />
         )}
       </main>
