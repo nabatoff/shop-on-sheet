@@ -4,15 +4,36 @@ import { buildCatalogFromMerch, type CapsuleStyleRow } from '@/lib/catalogAggreg
 import type { MerchLineRow } from '@/lib/catalogTypes';
 import { CatalogData, BannerSlide } from '@/types/catalog';
 
+const CATALOG_FETCH_TIMEOUT_MS = 12000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
 async function fetchCatalogData(): Promise<CatalogData> {
   const sb = getSupabase();
 
-  const [merchRes, capsRes, bannerRes, settingsRes] = await Promise.all([
-    sb.from('merch_lines').select('*').order('product_id').order('size'),
-    sb.from('catalog_capsules').select('name,color,prefix,outline,sort_order').order('sort_order').order('name'),
-    sb.from('banner_slides').select('image_url,slide_text,sort_order').order('sort_order'),
-    sb.from('site_settings').select('key,value'),
-  ]);
+  const [merchRes, capsRes, bannerRes, settingsRes] = await withTimeout(
+    Promise.all([
+      sb.from('merch_lines').select('*').order('product_id').order('size'),
+      sb.from('catalog_capsules').select('name,color,prefix,outline,sort_order').order('sort_order').order('name'),
+      sb.from('banner_slides').select('image_url,slide_text,sort_order').order('sort_order'),
+      sb.from('site_settings').select('key,value'),
+    ]),
+    CATALOG_FETCH_TIMEOUT_MS,
+    'Превышено время загрузки каталога',
+  );
 
   if (merchRes.error) throw new Error(merchRes.error.message);
   if (capsRes.error) throw new Error(capsRes.error.message);
@@ -50,6 +71,7 @@ export function useCatalog() {
     queryFn: fetchCatalogData,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    retry: 1,
   });
 
   return {

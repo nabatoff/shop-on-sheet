@@ -18,15 +18,40 @@ import { Link } from 'react-router-dom';
 import { Product } from '@/types/catalog';
 import { useToast } from '@/hooks/use-toast';
 
+const AUTH_CHECK_TIMEOUT_MS = 7000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
 async function loadIsAdmin(): Promise<boolean> {
   const sb = getSupabase();
-  const { data: { session } } = await sb.auth.getSession();
+  const { data: { session } } = await withTimeout(
+    sb.auth.getSession(),
+    AUTH_CHECK_TIMEOUT_MS,
+    'Auth session check timeout',
+  );
   if (!session?.user) return false;
-  const { data: profile } = await sb
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', session.user.id)
-    .maybeSingle();
+  const { data: profile } = await withTimeout(
+    sb
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', session.user.id)
+      .maybeSingle(),
+    AUTH_CHECK_TIMEOUT_MS,
+    'Admin profile check timeout',
+  );
   return !!profile?.is_admin;
 }
 
@@ -112,7 +137,12 @@ export default function Admin() {
         const ok = await loadIsAdmin();
         if (!cancelled && ok) setIsAuthenticated(true);
       } catch {
-        /* нет env или сеть */
+        // Если auth проверка подвисла/упала, не блокируем экран бесконечно.
+        try {
+          await getSupabase().auth.signOut({ scope: 'local' });
+        } catch {
+          /* ignore */
+        }
       } finally {
         if (!cancelled) setAuthChecked(true);
       }
