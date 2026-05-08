@@ -160,6 +160,13 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
   // Drag states for image reordering
   const [reorderDragIndex, setReorderDragIndex] = useState<number | null>(null);
   const [reorderOverIndex, setReorderOverIndex] = useState<number | null>(null);
+  const initDoneRef = useRef(false);
+  const validationTokenRef = useRef<Record<string, number>>({
+    image1: 0,
+    image2: 0,
+    image3: 0,
+    image4: 0,
+  });
 
   // File input refs
   const fileInputRefs = {
@@ -186,6 +193,10 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
   }, [existingProducts]);
 
   const validateImage = (field: keyof ProductFormData, url: string) => {
+    const key = String(field);
+    validationTokenRef.current[key] = (validationTokenRef.current[key] || 0) + 1;
+    const token = validationTokenRef.current[key];
+
     if (!url) {
       setImageStates(prev => ({
         ...prev,
@@ -209,12 +220,14 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
 
     const img = new Image();
     img.onload = () => {
+      if (validationTokenRef.current[key] !== token) return;
       setImageStates(prev => ({
         ...prev,
         [field]: { url, status: 'valid' }
       }));
     };
     img.onerror = () => {
+      if (validationTokenRef.current[key] !== token) return;
       setImageStates(prev => ({
         ...prev,
         [field]: { url, status: 'invalid' }
@@ -225,10 +238,16 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
 
   // Заполнение формы при открытии
   useEffect(() => {
-    if (open) {
-      const currentAllSizes = sizeOptions; // Используем размеры из таблицы
-      
-      if (mode === 'edit' && productToEdit) {
+    if (!open) {
+      initDoneRef.current = false;
+      return;
+    }
+    if (initDoneRef.current) return;
+    initDoneRef.current = true;
+
+    const currentAllSizes = sizeOptions; // Используем размеры из таблицы
+    
+    if (mode === 'edit' && productToEdit) {
         const productSizes = productToEdit.sizes || [];
         const isNoSizeProduct = productSizes.length === 0;
         setFormData({
@@ -261,7 +280,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
           if (url) validateImage(key as keyof ProductFormData, url);
           else setImageStates(prev => ({ ...prev, [key]: { url: '', status: 'idle' } }));
         });
-      } else if (mode === 'add') {
+    } else if (mode === 'add') {
         // Добавление нового товара
         if (productToEdit) {
           const productSizes = productToEdit.sizes || [];
@@ -307,7 +326,6 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
             image4: { url: '', status: 'idle' },
           });
         }
-      }
     }
   }, [open, mode, productToEdit, generateNewId, sizeOptions]);
 
@@ -436,6 +454,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
   }, [handleFileUpload]);
 
   const clearImage = useCallback((field: 'image1' | 'image2' | 'image3' | 'image4') => {
+    validationTokenRef.current[field] = (validationTokenRef.current[field] || 0) + 1;
     setFormData(prev => ({ ...prev, [field]: '' }));
     setImageStates(prev => ({
       ...prev,
