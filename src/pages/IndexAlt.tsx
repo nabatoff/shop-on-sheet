@@ -7,7 +7,7 @@ import { CartItem } from '@/types/catalog';
 import { ScrollToTop } from '@/components/catalog/ScrollToTop';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Product, BannerSlide } from '@/types/catalog';
-import { ShoppingCart, Search, X, Plus, Minus, ChevronLeft, ChevronRight, Filter, Package, Menu, Home, Info, Phone, MessageCircle } from 'lucide-react';
+import { ShoppingCart, Search, X, Plus, Minus, ChevronLeft, ChevronRight, Filter, Package, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import logoWhite from '@/assets/logo-white.png';
 import { RotatingBadge } from '@/components/catalog/RotatingBadge';
@@ -27,7 +27,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { MenuContainer, MenuItem } from '@/components/ui/fluid-menu';
 import { createCustomerOrderRpc } from '@/lib/createCustomerOrder';
 import { ImageLightbox } from '@/components/catalog/ImageLightbox';
 
@@ -249,7 +248,7 @@ function AltCartDrawer({
 }
 
 // ============================================
-// HEADER с Fluid Menu
+// HEADER
 // ============================================
 function AltHeader({ 
   cartCount, 
@@ -261,36 +260,16 @@ function AltHeader({
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="container px-4 h-16 flex items-center justify-between">
-        {/* Меню и слоган слева */}
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <MenuContainer>
-              <MenuItem icon={<Menu className="w-6 h-6" style={{ color: BRAND_COLOR }} />} />
-              <MenuItem 
-                icon={<Home className="w-5 h-5" style={{ color: BRAND_COLOR }} />} 
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              />
-              <MenuItem 
-                icon={<Info className="w-5 h-5" style={{ color: BRAND_COLOR }} />}
-                onClick={() => {}}
-              />
-              <MenuItem 
-                icon={<Phone className="w-5 h-5" style={{ color: BRAND_COLOR }} />}
-                onClick={() => {}}
-              />
-            </MenuContainer>
-          </div>
-          <span 
-            className="text-base sm:text-lg font-bold tracking-wide"
-            style={{ 
-              color: BRAND_COLOR,
-              fontFamily: 'Georgia, "Times New Roman", serif',
-              fontStyle: 'italic',
-            }}
-          >
-            стиль, который объединяет
-          </span>
-        </div>
+        <span 
+          className="text-base sm:text-lg font-bold tracking-wide"
+          style={{ 
+            color: BRAND_COLOR,
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontStyle: 'italic',
+          }}
+        >
+          стиль, который объединяет
+        </span>
         
         {/* Корзина */}
         <button
