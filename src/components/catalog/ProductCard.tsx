@@ -194,6 +194,14 @@ function ProductCardInner({ product, onAddToCart }: ProductCardProps) {
         >
           <Plus className="h-4 w-4 md:h-5 md:w-5" />
         </Button>
+
+        {product.limitedEdition && (
+          <span className="absolute top-3 left-0 z-20 px-3 py-1.5 text-[10px] md:text-xs font-bold uppercase tracking-[0.14em] text-white shadow-md bg-gradient-to-r from-gray-900 to-primary"
+            style={{ clipPath: 'polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%)' }}
+          >
+            Limited Edition
+          </span>
+        )}
       </div>
 
       {/* Product info */}

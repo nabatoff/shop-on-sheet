@@ -6,18 +6,18 @@ interface RotatingBadgeProps {
   color?: string; // цвет текста и иконки (hex)
 }
 
-export function RotatingBadge({ text = "ваш надежный партнер", className = "", color }: RotatingBadgeProps) {
-  // Text appears twice around the circle with bullets after each
-  const displayText = ` • ${text} • ${text} `.toUpperCase();
+export function RotatingBadge({ text = "ваш надёжный партнёр", className = "", color }: RotatingBadgeProps) {
+  // Две полные фразы по кругу. Радиус пути увеличен, кегль/трекинг подогнаны под длину.
+  const phrase = text.trim().toUpperCase();
+  const displayText = `${phrase}  •  ${phrase}  •  `;
 
-  // Если передан цвет, используем его, иначе fallback на CSS класс
-  const textStyle = color 
-    ? { fontSize: "7.4px", fill: color } 
-    : { fontSize: "7.4px" };
-  
-  const textClassName = color 
-    ? "tracking-[0.09em] font-medium" 
-    : "fill-foreground tracking-[0.09em] font-medium";
+  const textStyle = color
+    ? { fontSize: "5.8px", letterSpacing: "0.6px", fill: color }
+    : { fontSize: "5.8px", letterSpacing: "0.6px" };
+
+  const textClassName = color
+    ? "font-medium"
+    : "fill-foreground font-medium";
 
   const isWhite = color && /^#(fff|ffffff)$/i.test(color.replace(/\s/g, ''));
   const isBlue = color && color.toLowerCase() === '#0047bb';
@@ -31,10 +31,11 @@ export function RotatingBadge({ text = "ваш надежный партнер",
     <div className={`relative w-24 h-24 sm:w-32 sm:h-32 md:w-44 md:h-44 ${className}`}>
       <svg className="absolute inset-0 w-full h-full animate-spin-slow" viewBox="0 0 100 100">
         <defs>
-          <path id="circlePath" d="M 50,50 m -38,0 a 38,38 0 1,1 76,0 a 38,38 0 1,1 -76,0" fill="none" />
+          {/* Больше длина окружности → две фразы полностью помещаются */}
+          <path id="circlePath" d="M 50,50 m -43,0 a 43,43 0 1,1 86,0 a 43,43 0 1,1 -86,0" fill="none" />
         </defs>
         <text className={textClassName} style={textStyle}>
-          <textPath href="#circlePath" startOffset="0%">
+          <textPath href="#circlePath" startOffset="0%" textLength="270" lengthAdjust="spacing">
             {displayText}
           </textPath>
         </text>

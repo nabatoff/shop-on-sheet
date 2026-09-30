@@ -18,6 +18,7 @@ interface RawProduct {
   capsule: string;
   description: string;
   preorder: boolean;
+  limitedEdition?: boolean;
   disabled?: boolean;
 }
 
@@ -36,6 +37,7 @@ export function merchRowsToRawProducts(rows: MerchLineRow[]): RawProduct[] {
     capsule: String(row.capsule || '').trim(),
     description: String(row.description || '').trim(),
     preorder: !!row.preorder,
+    limitedEdition: !!row.limited_edition,
     disabled: row.disabled ? true : undefined,
   }));
 }
@@ -61,6 +63,7 @@ function groupProductsByID(rawProducts: RawProduct[], hideDisabled: boolean): Pr
         existing.stock = (existing.stock || 0) + raw.quantity;
       }
       if (raw.preorder) existing.preorder = true;
+      if (raw.limitedEdition) existing.limitedEdition = true;
       if (raw.disabled) existing.disabled = true;
     } else {
       const images = [raw.image1, raw.image2, raw.image3, raw.image4].filter(Boolean);
@@ -82,6 +85,7 @@ function groupProductsByID(rawProducts: RawProduct[], hideDisabled: boolean): Pr
         _stockBySize: stockMap,
         _preorderBySize: preorderMap,
         preorder: raw.preorder,
+        limitedEdition: raw.limitedEdition || undefined,
         disabled: raw.disabled || undefined,
       });
     }

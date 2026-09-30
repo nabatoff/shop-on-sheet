@@ -19,6 +19,7 @@ interface SingleProductRow {
   capsule: string;
   description: string;
   preorder: boolean;
+  limitedEdition?: boolean;
   disabled?: boolean;
 }
 
@@ -39,6 +40,7 @@ function snakeInsert(r: SingleProductRow): Record<string, unknown> {
     capsule: r.capsule,
     description: r.description,
     preorder: r.preorder,
+    limited_edition: r.limitedEdition === true,
     disabled: r.disabled === true,
   };
 }
@@ -81,6 +83,7 @@ export function useCatalogAdmin() {
           capsule: product.capsule,
           description: product.description,
           preorder: product.preorder,
+          limitedEdition: product.limitedEdition === true,
           disabled,
         },
       ];
@@ -100,6 +103,7 @@ export function useCatalogAdmin() {
       capsule: product.capsule,
       description: product.description,
       preorder: sizeData.preorder === true || product.preorder === true,
+      limitedEdition: product.limitedEdition === true,
       disabled,
     }));
   };
@@ -288,6 +292,7 @@ export function useCatalogAdmin() {
           capsule: row.capsule,
           description: row.description,
           preorder: row.preorder,
+          limited_edition: false,
           disabled: false,
         }));
 

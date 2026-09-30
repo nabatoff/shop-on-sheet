@@ -18,7 +18,7 @@ export function AltLoadingScreen() {
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
         <RotatingBadge
-          text="ВАШ НАДЕЖНЫЙ ПАРТНЕР"
+          text="ВАШ НАДЁЖНЫЙ ПАРТНЁР"
           color="#ffffff"
           className="w-36 h-36 sm:w-44 sm:h-44 md:w-52 md:h-52"
         />

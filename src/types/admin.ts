@@ -19,6 +19,7 @@ export interface ProductFormData {
   capsule: string;
   description: string;
   preorder: boolean;
+  limitedEdition?: boolean;
   noSizeQuantity?: number;
   noSizeQuantitySet?: number;
   disabled?: boolean;

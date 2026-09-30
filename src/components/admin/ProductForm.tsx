@@ -46,6 +46,7 @@ const createInitialFormData = (allSizes: string[]): ProductFormData => ({
   capsule: '',
   description: '',
   preorder: false,
+  limitedEdition: false,
   disabled: false,
 });
 
@@ -269,6 +270,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
           capsule: productToEdit.capsule || '',
           description: productToEdit.description || '',
           preorder: productToEdit.preorder ?? false,
+          limitedEdition: productToEdit.limitedEdition ?? false,
           disabled: productToEdit.disabled ?? false,
           noSizeQuantity: isNoSizeProduct ? 0 : undefined,
           noSizeQuantitySet: undefined,
@@ -304,6 +306,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
             capsule: productToEdit.capsule || '',
             description: productToEdit.description || '',
             preorder: productToEdit.preorder ?? false,
+            limitedEdition: productToEdit.limitedEdition ?? false,
             disabled: productToEdit.disabled ?? false,
             noSizeQuantity: isNoSizeProduct ? (productToEdit.stock ?? 0) : undefined,
           });
@@ -578,6 +581,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
             stockBySize: {},
             preorderBySize: {},
             preorder: formData.preorder,
+            limitedEdition: formData.limitedEdition === true,
             disabled: formData.disabled,
           }
         : (() => {
@@ -599,6 +603,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
               stockBySize,
               preorderBySize,
               preorder: formData.preorder || enabledSizes.some((s) => s.preorder === true),
+              limitedEdition: formData.limitedEdition === true,
               disabled: formData.disabled,
             };
           })();
@@ -857,7 +862,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
                     </Select>
                   </div>
 
-                  <div className="flex items-end pb-1">
+                  <div className="flex flex-wrap items-end gap-x-4 gap-y-2 pb-1">
                     <label className="flex items-center gap-2 cursor-pointer h-10">
                       <input
                         type="checkbox"
@@ -867,7 +872,16 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
                       />
                       <span className="text-sm text-gray-700 font-medium">Под заказ (для товара без размера)</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer h-10 ml-4">
+                    <label className="flex items-center gap-2 cursor-pointer h-10">
+                      <input
+                        type="checkbox"
+                        checked={formData.limitedEdition === true}
+                        onChange={(e) => handleChange('limitedEdition', e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-rose-500 focus:ring-rose-500"
+                      />
+                      <span className="text-sm text-gray-700 font-medium">Limited Edition</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer h-10">
                       <input
                         type="checkbox"
                         checked={formData.disabled === true}

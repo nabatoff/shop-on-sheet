@@ -14,5 +14,6 @@ export interface MerchLineRow {
   capsule: string;
   description: string;
   preorder: boolean;
+  limited_edition: boolean;
   disabled: boolean;
 }

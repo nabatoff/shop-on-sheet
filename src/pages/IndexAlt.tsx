@@ -746,6 +746,18 @@ function ProductCard({
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
+
+        {product.limitedEdition && (
+          <span
+            className="absolute top-3 left-0 z-20 px-3 py-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-[0.14em] text-white shadow-md"
+            style={{
+              background: 'linear-gradient(135deg, #111827 0%, #0047BB 100%)',
+              clipPath: 'polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%)',
+            }}
+          >
+            Limited Edition
+          </span>
+        )}
         
         {/* Индикаторы фото */}
         {product.images.length > 1 && (
@@ -1209,7 +1221,7 @@ const IndexAlt = () => {
         aria-label="Написать в WhatsApp"
       >
         <MessageCircle className="w-5 h-5 sm:w-5 sm:h-5 max-sm:w-4 max-sm:h-4 shrink-0" />
-        <span>Узнать у Виктории</span>
+        <span>Уточнить детали</span>
       </a>
     </div>
   );

@@ -11,6 +11,7 @@ export interface Product {
   stockBySize?: Record<string, number>;
   preorder?: boolean;
   preorderBySize?: Record<string, boolean>;
+  limitedEdition?: boolean;
   disabled?: boolean;
 }
 
