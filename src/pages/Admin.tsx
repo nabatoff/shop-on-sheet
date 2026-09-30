@@ -247,15 +247,22 @@ export default function Admin() {
   // Оптимистичное обновление после успешного добавления/редактирования
   const handleProductSuccess = useCallback((product: Product, mode: 'add' | 'edit') => {
     if (mode === 'add') {
-      // Добавляем новый товар в начало списка
       setLocalProducts(prev => [product, ...prev]);
     } else {
-      // Обновляем существующий товар
-      setLocalProducts(prev => 
-        prev.map(p => p.id === product.id ? product : p)
+      setLocalProducts(prev =>
+        prev.map(p => (p.id === product.id ? product : p))
       );
     }
-  }, []);
+    // Тихий refetch — остатки после edit считаются из delta/set, лучше сверить с БД
+    void fetchProducts()
+      .then((products) => {
+        setLocalProducts(products);
+        setLastUpdatedAt(Date.now());
+      })
+      .catch(() => {
+        /* optimistic уже применён */
+      });
+  }, [fetchProducts]);
 
   // Удаление товара
   const handleDeleteProduct = async (product: Product) => {

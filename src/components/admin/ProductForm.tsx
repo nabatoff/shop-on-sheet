@@ -567,6 +567,10 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
           : `Добавлено ${rowCount} ${rowCount === 1 ? 'строка' : rowCount < 5 ? 'строки' : 'строк'} в таблицу`,
       });
 
+      // В edit quantity = delta («Добавить»), quantitySet = абсолют. Нельзя писать delta в stockBySize.
+      const resolveStock = (prev: number, delta: number, absolute?: number) =>
+        absolute != null ? Math.max(0, absolute) : Math.max(0, prev + (delta || 0));
+
       const newProduct: Product = isNoSize
         ? {
             id: formData.id,
@@ -577,7 +581,10 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
             capsule: formData.capsule,
             description: formData.description,
             sizes: [],
-            stock: formData.noSizeQuantity ?? 0,
+            stock:
+              mode === 'edit'
+                ? resolveStock(productToEdit?.stock ?? 0, formData.noSizeQuantity ?? 0, formData.noSizeQuantitySet)
+                : (formData.noSizeQuantity ?? 0),
             stockBySize: {},
             preorderBySize: {},
             preorder: formData.preorder,
@@ -585,10 +592,14 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
             disabled: formData.disabled,
           }
         : (() => {
+            const prevStock = productToEdit?.stockBySize || {};
             const stockBySize: Record<string, number> = {};
             const preorderBySize: Record<string, boolean> = {};
-            enabledSizes.forEach(s => {
-              stockBySize[s.size] = s.quantity;
+            enabledSizes.forEach((s) => {
+              stockBySize[s.size] =
+                mode === 'edit'
+                  ? resolveStock(prevStock[s.size] ?? 0, s.quantity, s.quantitySet)
+                  : s.quantity;
               preorderBySize[s.size] = s.preorder === true;
             });
             return {
@@ -601,6 +612,7 @@ export function ProductForm({ open, onOpenChange, mode, productToEdit, onSuccess
               description: formData.description,
               sizes: enabledSizes.map(s => s.size),
               stockBySize,
+              stock: Object.values(stockBySize).reduce((sum, q) => sum + q, 0),
               preorderBySize,
               preorder: formData.preorder || enabledSizes.some((s) => s.preorder === true),
               limitedEdition: formData.limitedEdition === true,

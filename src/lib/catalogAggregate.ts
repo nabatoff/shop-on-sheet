@@ -53,15 +53,12 @@ function groupProductsByID(rawProducts: RawProduct[], hideDisabled: boolean): Pr
       if (raw.size && !existing.sizes.includes(raw.size)) {
         existing.sizes.push(raw.size);
       }
-      if (raw.size && raw.quantity) {
-        existing._stockBySize.set(raw.size, (existing._stockBySize.get(raw.size) || 0) + raw.quantity);
-      }
       if (raw.size) {
+        // quantity=0 тоже пишем — иначе размер «пропадает» из stockBySize
+        existing._stockBySize.set(raw.size, (existing._stockBySize.get(raw.size) || 0) + (raw.quantity || 0));
         existing._preorderBySize.set(raw.size, raw.preorder === true);
       }
-      if (raw.quantity) {
-        existing.stock = (existing.stock || 0) + raw.quantity;
-      }
+      existing.stock = (existing.stock || 0) + (raw.quantity || 0);
       if (raw.preorder) existing.preorder = true;
       if (raw.limitedEdition) existing.limitedEdition = true;
       if (raw.disabled) existing.disabled = true;
@@ -69,7 +66,7 @@ function groupProductsByID(rawProducts: RawProduct[], hideDisabled: boolean): Pr
       const images = [raw.image1, raw.image2, raw.image3, raw.image4].filter(Boolean);
       const stockMap = new Map<string, number>();
       const preorderMap = new Map<string, boolean>();
-      if (raw.size && raw.quantity) stockMap.set(raw.size, raw.quantity);
+      if (raw.size) stockMap.set(raw.size, raw.quantity || 0);
       if (raw.size) preorderMap.set(raw.size, raw.preorder === true);
 
       grouped.set(raw.id, {
