@@ -36,7 +36,7 @@ export async function createCustomerOrderRpc(
   items: CreateOrderLine[],
 ) {
   if (!isOrderCity(customerCity.trim())) {
-    throw new Error('Выберите город: Уральск, Алматы или Астана');
+    throw new Error('Выберите город: Уральск, Алматы, Астана или Усть-Каменогорск');
   }
 
   const sb = getSupabase();
