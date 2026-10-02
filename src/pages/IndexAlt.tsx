@@ -63,7 +63,7 @@ function AltCartDrawer({
     return new Intl.NumberFormat('ru-RU').format(price) + ' ₸';
   };
 
-  const sendToWhatsApp = () => {
+  const sendToWhatsApp = (orderId: string) => {
     const orderText = items
       .map(item => {
         const sizeText = item.selectedSize ? ` (${item.selectedSize})` : '';
@@ -73,7 +73,7 @@ function AltCartDrawer({
     const clientBlock = (customerName.trim() || customerPhone.trim())
       ? `*Клиент:* ${customerName.trim() || '—'}\n*Телефон:* ${customerPhone.trim() || '—'}\n\n`
       : '';
-    const message = `🛒 *Новый заказ*\n\n${clientBlock}${orderText}\n\n*Итого: ${formatPrice(totalPrice)}*`;
+    const message = `🛒 *Новый заказ*\n*Номер:* ${orderId}\n\n${clientBlock}${orderText}\n\n*Итого: ${formatPrice(totalPrice)}*`;
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank');
   };
@@ -89,7 +89,7 @@ function AltCartDrawer({
 
     try {
       setIsSubmitting(true);
-      await createCustomerOrderRpc(
+      const result = await createCustomerOrderRpc(
         name,
         phone,
         items.map((item) => ({
@@ -100,7 +100,7 @@ function AltCartDrawer({
           price: item.price,
         })),
       );
-      sendToWhatsApp();
+      sendToWhatsApp(result.orderId || '—');
       onClear();
       onClose();
     } catch (e) {

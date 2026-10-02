@@ -28,5 +28,5 @@ export async function createCustomerOrderRpc(customerName: string, customerPhone
   if (row?.result !== 'success') {
     throw new Error(row?.error || 'Не удалось создать заказ');
   }
-  return row;
+  return { result: 'success' as const, orderId: String(row.orderId || '') };
 }
