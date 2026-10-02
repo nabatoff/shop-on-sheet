@@ -50,7 +50,7 @@ export function CartDrawer({
       })
       .join('\n');
     const clientBlock =
-      `*Клиент:* ${customerName.trim() || '—'}\n` +
+      `*Покупатель:* ${customerName.trim() || '—'}\n` +
       `*Телефон:* ${customerPhone.trim() || '—'}\n` +
       `*Город:* ${customerCity.trim() || '—'}\n\n`;
     const message =

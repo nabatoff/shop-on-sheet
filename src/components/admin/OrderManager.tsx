@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ShoppingCart, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, ShoppingCart, PlusCircle, Trash2, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getSupabase } from '@/lib/supabase';
 import type { Product } from '@/types/catalog';
@@ -19,6 +19,7 @@ interface OrderItem {
 interface Order {
   orderId: string;
   createdAt: string;
+  createdAtIso: string;
   customerName: string;
   customerPhone: string;
   customerCity: string;
@@ -51,6 +52,7 @@ function mapRowsToOrders(rows: Record<string, unknown>[]): Order[] {
     return {
       orderId: String(row.order_id ?? ''),
       createdAt: String(row.created_at_display || row.created_at || ''),
+      createdAtIso: String(row.created_at ?? ''),
       customerName: String(row.customer_name ?? ''),
       customerPhone: String(row.customer_phone ?? ''),
       customerCity: String(row.customer_city ?? ''),
@@ -89,11 +91,39 @@ function formatOrderDateRu(dateStr: string): string {
   return `${wd}, ${day} ${month} ${year}, ${h}:${m}:${sec}`;
 }
 
+function orderDateKey(order: Order): string | null {
+  if (order.createdAtIso) {
+    const d = new Date(order.createdAtIso);
+    if (!isNaN(d.getTime())) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+  }
+  const s = order.createdAt.trim();
+  const dmys = s.match(/^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})/);
+  if (dmys) {
+    return `${dmys[3]}-${dmys[2].padStart(2, '0')}-${dmys[1].padStart(2, '0')}`;
+  }
+  return null;
+}
+
+function csvEscape(value: string | number): string {
+  const stringValue = String(value ?? '');
+  if (stringValue.includes(';') || stringValue.includes('"') || stringValue.includes('\n')) {
+    return `"${stringValue.replace(/"/g, '""')}"`;
+  }
+  return stringValue;
+}
+
 export function OrderManager({ open, onOpenChange, products }: OrderManagerProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [manualName, setManualName] = useState('');
   const [manualPhone, setManualPhone] = useState('');
   const [manualCity, setManualCity] = useState('');
@@ -102,6 +132,93 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
   ]);
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
+
+  const filteredOrders = useMemo(() => {
+    return orders
+      .filter((order) => {
+        const key = orderDateKey(order);
+        if (!key) return !dateFrom && !dateTo;
+        if (dateFrom && key < dateFrom) return false;
+        if (dateTo && key > dateTo) return false;
+        return true;
+      })
+      .slice()
+      .sort((a, b) => {
+        const aIso = a.createdAtIso || a.createdAt;
+        const bIso = b.createdAtIso || b.createdAt;
+        return aIso < bIso ? 1 : -1;
+      });
+  }, [orders, dateFrom, dateTo]);
+
+  const exportOrdersToExcel = () => {
+    if (filteredOrders.length === 0) {
+      toast({
+        title: 'Нет данных',
+        description: 'За выбранный период заказов нет',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const rows: Array<Record<string, string | number>> = [];
+    filteredOrders.forEach((order) => {
+      if (order.items.length === 0) {
+        rows.push({
+          '№ заказа': order.orderId,
+          Дата: formatOrderDateRu(order.createdAt),
+          Покупатель: order.customerName,
+          Телефон: order.customerPhone,
+          Город: order.customerCity || '',
+          Статус: order.status,
+          'Сумма заказа': order.total,
+          Товар: '',
+          Размер: '',
+          Колво: '',
+          Цена: '',
+          'Сумма позиции': '',
+        });
+        return;
+      }
+      order.items.forEach((item) => {
+        rows.push({
+          '№ заказа': order.orderId,
+          Дата: formatOrderDateRu(order.createdAt),
+          Покупатель: order.customerName,
+          Телефон: order.customerPhone,
+          Город: order.customerCity || '',
+          Статус: order.status,
+          'Сумма заказа': order.total,
+          Товар: item.productName,
+          Размер: item.size,
+          Колво: item.quantity,
+          Цена: item.price,
+          'Сумма позиции': item.quantity * item.price,
+        });
+      });
+    });
+
+    const headers = Object.keys(rows[0]);
+    const csvRows = [
+      headers.join(';'),
+      ...rows.map((row) => headers.map((h) => csvEscape(row[h])).join(';')),
+    ];
+    const csvContent = '\uFEFF' + csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const fromPart = dateFrom || 'all';
+    const toPart = dateTo || 'all';
+    link.download = `orders_${fromPart}_${toPart}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({
+      title: 'Экспорт готов',
+      description: `Выгружено заказов: ${filteredOrders.length}`,
+    });
+  };
 
   const productOptions = useMemo(
     () =>
@@ -353,27 +470,75 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
         <div className="grid grid-cols-1 lg:grid-cols-[2fr,1.4fr] gap-6 flex-1 min-h-0">
           {/* Список заказов */}
           <div className="flex flex-col min-h-0 border border-gray-200 rounded-lg overflow-hidden bg-gray-50/60">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-800">Все заказы</span>
-                <Badge variant="secondary" className="bg-gray-100 text-gray-700">
-                  {orders.length}
-                </Badge>
+            <div className="flex flex-col gap-3 px-4 py-3 border-b border-gray-200 bg-white">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-800">Заказы</span>
+                  <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                    {filteredOrders.length}
+                    {filteredOrders.length !== orders.length ? ` / ${orders.length}` : ''}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportOrdersToExcel}
+                    disabled={isLoading || filteredOrders.length === 0}
+                    className="bg-white border-2 border-emerald-500 text-emerald-800 hover:bg-emerald-50"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span className="ml-2 font-medium">Excel</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={loadOrders}
+                    disabled={isLoading}
+                    className="bg-white border-2 border-gray-400 text-gray-900 hover:bg-gray-100 hover:text-gray-900"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Loader2 className="h-4 w-4" />
+                    )}
+                    <span className="ml-2 font-medium">Обновить</span>
+                  </Button>
+                </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadOrders}
-                disabled={isLoading}
-                className="bg-white border-2 border-gray-400 text-gray-900 hover:bg-gray-100 hover:text-gray-900"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Loader2 className="h-4 w-4" />
+              <div className="flex items-end gap-2 flex-wrap">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-gray-600">С</label>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="rounded-md border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-gray-600">По</label>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="rounded-md border border-gray-300 px-2 py-1.5 text-sm text-gray-900"
+                  />
+                </div>
+                {(dateFrom || dateTo) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setDateFrom('');
+                      setDateTo('');
+                    }}
+                    className="text-xs text-gray-600"
+                  >
+                    Сбросить
+                  </Button>
                 )}
-                <span className="ml-2 font-medium">Обновить заказы</span>
-              </Button>
+              </div>
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
@@ -382,19 +547,16 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
                   <Loader2 className="h-6 w-6 animate-spin mr-2" />
                   Загрузка заказов...
                 </div>
-              ) : orders.length === 0 ? (
+              ) : filteredOrders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-gray-400 text-center px-4">
                   <ShoppingCart className="h-10 w-10 mb-2" />
-                  <div>Заказов пока нет</div>
+                  <div>{orders.length === 0 ? 'Заказов пока нет' : 'Нет заказов за выбранный период'}</div>
                   <div className="text-[11px] text-gray-400 mt-2 max-w-xs">
                     Заказы хранятся в Supabase (таблицы orders и order_items).
                   </div>
                 </div>
               ) : (
-                orders
-                  .slice()
-                  .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-                  .map(order => (
+                filteredOrders.map(order => (
                     <div
                       key={order.orderId}
                       className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
