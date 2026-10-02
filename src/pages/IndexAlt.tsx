@@ -31,7 +31,7 @@ import { createCustomerOrderRpc } from '@/lib/createCustomerOrder';
 import { ImageLightbox } from '@/components/catalog/ImageLightbox';
 
 const BRAND_COLOR = '#0047BB';
-const WHATSAPP_PHONE = '77001234567'; // номер без +
+const WHATSAPP_PHONE = '77775225374'; // номер без +
 
 // ============================================
 // КАСТОМНАЯ КОРЗИНА
@@ -44,7 +44,7 @@ function AltCartDrawer({
   onRemove,
   onClear,
   totalPrice,
-  whatsappNumber = '77001234567',
+  whatsappNumber = '77775225374',
 }: {
   isOpen: boolean;
   onClose: () => void;

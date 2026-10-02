@@ -29,7 +29,7 @@ export function CartDrawer({
   onRemove,
   onClear,
   totalPrice,
-  whatsappNumber = '77001234567',
+  whatsappNumber = '77775225374',
 }: CartDrawerProps) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
