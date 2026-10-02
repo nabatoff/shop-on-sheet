@@ -8,6 +8,26 @@ export interface CreateOrderLine {
   price: number;
 }
 
+function parseRpcPayload(data: unknown): { result?: string; error?: string; orderId?: string } {
+  let row: unknown = data;
+  if (typeof row === 'string') {
+    try {
+      row = JSON.parse(row);
+    } catch {
+      return {};
+    }
+  }
+  if (Array.isArray(row)) row = row[0];
+  if (!row || typeof row !== 'object') return {};
+  const r = row as Record<string, unknown>;
+  const orderId = r.orderId ?? r.order_id;
+  return {
+    result: r.result != null ? String(r.result) : undefined,
+    error: r.error != null ? String(r.error) : undefined,
+    orderId: orderId != null && String(orderId).trim() ? String(orderId).trim() : undefined,
+  };
+}
+
 export async function createCustomerOrderRpc(customerName: string, customerPhone: string, items: CreateOrderLine[]) {
   const sb = getSupabase();
   const { data, error } = await sb.rpc('create_customer_order', {
@@ -24,9 +44,12 @@ export async function createCustomerOrderRpc(customerName: string, customerPhone
 
   if (error) throw error;
 
-  const row = data as { result?: string; error?: string; orderId?: string };
-  if (row?.result !== 'success') {
-    throw new Error(row?.error || 'Не удалось создать заказ');
+  const row = parseRpcPayload(data);
+  if (row.result !== 'success') {
+    throw new Error(row.error || 'Не удалось создать заказ');
   }
-  return { result: 'success' as const, orderId: String(row.orderId || '') };
+  if (!row.orderId) {
+    throw new Error('Заказ создан, но номер не получен. Обновите страницу и попробуйте снова.');
+  }
+  return { result: 'success' as const, orderId: row.orderId };
 }

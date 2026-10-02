@@ -50,7 +50,11 @@ export function CartDrawer({
     const clientBlock = (customerName.trim() || customerPhone.trim())
       ? `*Клиент:* ${customerName.trim() || '—'}\n*Телефон:* ${customerPhone.trim() || '—'}\n\n`
       : '';
-    const message = `🛒 *Новый заказ*\n*Номер:* ${orderId}\n\n${clientBlock}${orderText}\n\n*Итого: ${formatPrice(totalPrice)}*`;
+    const message =
+      `*Новый заказ № ${orderId}*\n` +
+      `*Номер:* ${orderId}\n\n` +
+      `${clientBlock}${orderText}\n\n` +
+      `*Итого: ${formatPrice(totalPrice)}*`;
     return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
   };
 
