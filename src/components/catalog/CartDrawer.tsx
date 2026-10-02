@@ -9,6 +9,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { createCustomerOrderRpc } from '@/lib/createCustomerOrder';
+import { ORDER_CITIES } from '@/lib/orderCities';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export function CartDrawer({
 }: CartDrawerProps) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerCity, setCustomerCity] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [whatsAppPrompt, setWhatsAppPrompt] = useState<{ orderId: string; url: string } | null>(null);
 
@@ -47,9 +49,10 @@ export function CartDrawer({
         return `• ${item.name}${sizeText} x${item.quantity} — ${formatPrice(item.price * item.quantity)}`;
       })
       .join('\n');
-    const clientBlock = (customerName.trim() || customerPhone.trim())
-      ? `*Клиент:* ${customerName.trim() || '—'}\n*Телефон:* ${customerPhone.trim() || '—'}\n\n`
-      : '';
+    const clientBlock =
+      `*Клиент:* ${customerName.trim() || '—'}\n` +
+      `*Телефон:* ${customerPhone.trim() || '—'}\n` +
+      `*Город:* ${customerCity.trim() || '—'}\n\n`;
     const message =
       `*Новый заказ № ${orderId}*\n` +
       `*Номер:* ${orderId}\n\n` +
@@ -62,6 +65,7 @@ export function CartDrawer({
     setWhatsAppPrompt(null);
     setCustomerName('');
     setCustomerPhone('');
+    setCustomerCity('');
     onClear();
     onClose();
   };
@@ -86,8 +90,13 @@ export function CartDrawer({
     if (items.length === 0) return;
     const name = customerName.trim();
     const phone = customerPhone.trim();
+    const city = customerCity.trim();
     if (!name || !phone) {
       alert('Укажите имя и телефон покупателя.');
+      return;
+    }
+    if (!city) {
+      alert('Выберите город.');
       return;
     }
 
@@ -96,6 +105,7 @@ export function CartDrawer({
       const result = await createCustomerOrderRpc(
         name,
         phone,
+        city,
         items.map((item) => ({
           productId: item.id,
           productName: item.name,
@@ -255,6 +265,21 @@ export function CartDrawer({
                       className="w-full rounded-md border border-white/30 bg-white/10 px-3 py-2 text-sm text-foreground placeholder:text-foreground/60 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                       placeholder="+7 ..."
                     />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-foreground/80">Город</label>
+                    <select
+                      value={customerCity}
+                      onChange={(e) => setCustomerCity(e.target.value)}
+                      className="w-full rounded-md border border-white/30 bg-white/10 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    >
+                      <option value="">Выберите город</option>
+                      {ORDER_CITIES.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

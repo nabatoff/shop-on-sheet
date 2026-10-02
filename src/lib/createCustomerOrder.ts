@@ -1,4 +1,5 @@
 import { getSupabase } from '@/lib/supabase';
+import { isOrderCity } from '@/lib/orderCities';
 
 export interface CreateOrderLine {
   productId: string;
@@ -28,11 +29,21 @@ function parseRpcPayload(data: unknown): { result?: string; error?: string; orde
   };
 }
 
-export async function createCustomerOrderRpc(customerName: string, customerPhone: string, items: CreateOrderLine[]) {
+export async function createCustomerOrderRpc(
+  customerName: string,
+  customerPhone: string,
+  customerCity: string,
+  items: CreateOrderLine[],
+) {
+  if (!isOrderCity(customerCity.trim())) {
+    throw new Error('Выберите город: Уральск, Алматы или Астана');
+  }
+
   const sb = getSupabase();
   const { data, error } = await sb.rpc('create_customer_order', {
     p_customer_name: customerName.trim(),
     p_customer_phone: customerPhone.trim(),
+    p_customer_city: customerCity.trim(),
     p_items: items.map((item) => ({
       productId: item.productId,
       productName: item.productName,

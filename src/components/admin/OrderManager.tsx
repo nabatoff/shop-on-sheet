@@ -6,6 +6,7 @@ import { Loader2, ShoppingCart, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getSupabase } from '@/lib/supabase';
 import type { Product } from '@/types/catalog';
+import { ORDER_CITIES } from '@/lib/orderCities';
 
 interface OrderItem {
   productId: string;
@@ -20,6 +21,7 @@ interface Order {
   createdAt: string;
   customerName: string;
   customerPhone: string;
+  customerCity: string;
   status: string;
   items: OrderItem[];
   total: number;
@@ -51,6 +53,7 @@ function mapRowsToOrders(rows: Record<string, unknown>[]): Order[] {
       createdAt: String(row.created_at_display || row.created_at || ''),
       customerName: String(row.customer_name ?? ''),
       customerPhone: String(row.customer_phone ?? ''),
+      customerCity: String(row.customer_city ?? ''),
       status: String(row.status ?? ''),
       total: Number(row.total) || 0,
       items,
@@ -93,6 +96,7 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [manualName, setManualName] = useState('');
   const [manualPhone, setManualPhone] = useState('');
+  const [manualCity, setManualCity] = useState('');
   const [manualItems, setManualItems] = useState<OrderItem[]>([
     { productId: '', productName: '', size: '', quantity: 1, price: 0 },
   ]);
@@ -126,6 +130,7 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
           created_at_display,
           customer_name,
           customer_phone,
+          customer_city,
           status,
           total,
           order_items ( product_id, product_name, size, quantity, price )
@@ -258,6 +263,7 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
       const { data, error } = await sb.rpc('create_manual_order', {
         p_customer_name: name,
         p_customer_phone: phone,
+        p_customer_city: manualCity.trim(),
         p_items: items.map((it) => ({
           productId: it.productId,
           productName: it.productName,
@@ -278,6 +284,7 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
       });
       setManualName('');
       setManualPhone('');
+      setManualCity('');
       setManualItems([{ productId: '', productName: '', size: '', quantity: 1, price: 0 }]);
       await loadOrders();
     } catch (e) {
@@ -406,6 +413,11 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
                           <div className="text-xs text-gray-600">
                             {order.customerPhone}
                           </div>
+                          {order.customerCity ? (
+                            <div className="text-xs text-gray-600">
+                              Город: {order.customerCity}
+                            </div>
+                          ) : null}
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -558,6 +570,21 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="+7 ..."
                 />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-700">Город</label>
+                <select
+                  value={manualCity}
+                  onChange={(e) => setManualCity(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Не указан</option>
+                  {ORDER_CITIES.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -713,6 +740,7 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
                 onClick={() => {
                   setManualName('');
                   setManualPhone('');
+                  setManualCity('');
                   setManualItems([{ productId: '', productName: '', size: '', quantity: 1, price: 0 }]);
                 }}
               >
