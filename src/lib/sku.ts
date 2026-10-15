@@ -9,8 +9,7 @@ function nameCode(name: string): string {
 }
 
 /**
- * Артикул = КАТЕГОРИЯ-КАПСУЛА-ID[-РАЗМЕР], например СВИ-БЕЛ-1-L.
- * ID товара добавлен, чтобы товары одной категории и капсулы не совпадали.
+ * Артикул = ID + КАТЕГОРИЯ + КАПСУЛА + РАЗМЕР без разделителей, например 1СВИБЕЛL.
  * Для товара без размера артикул один, без суффикса размера.
  */
 export function buildSku(
@@ -18,9 +17,8 @@ export function buildSku(
   size?: string
 ): string {
   const sizePart = (size || '').replace(/\s+/g, '').toUpperCase();
-  return [nameCode(product.category || ''), nameCode(product.capsule || ''), String(product.id), sizePart]
-    .filter(Boolean)
-    .join('-');
+  const idPart = String(product.id).replace(/\s+/g, '');
+  return idPart + nameCode(product.category || '') + nameCode(product.capsule || '') + sizePart;
 }
 
 /** Сохранённый в БД артикул; если его ещё нет (старые данные) — вычисляем. */
