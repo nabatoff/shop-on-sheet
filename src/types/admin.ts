@@ -46,6 +46,8 @@ export interface LogEntry {
 }
 
 export interface ImportRow {
+  /** Артикул из файла; закрепляется только за новыми строками, у существующих не меняется */
+  sku?: string;
   id: string;
   category: string;
   name: string;

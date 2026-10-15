@@ -294,6 +294,7 @@ export function useCatalogAdmin() {
           preorder: row.preorder,
           limited_edition: false,
           disabled: false,
+          sku: String(row.sku ?? '').trim(),
         }));
 
       const { error: upErr } = await sb.from('merch_lines').upsert(payload, {

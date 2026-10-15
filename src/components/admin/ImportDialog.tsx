@@ -90,9 +90,10 @@ const EXPECTED_HEADERS = ['Артикул', 'ID', 'Категория', 'Наз�
 
 // Старый формат (без «Артикул»): колонки идут строго в этом порядке
 const LEGACY_FIELDS = ['id', 'category', 'name', 'size', 'quantity', 'price', 'image1', 'image2', 'image3', 'image4', 'capsule', 'description', 'preorder'] as const;
-type Field = (typeof LEGACY_FIELDS)[number];
+type Field = (typeof LEGACY_FIELDS)[number] | 'sku';
 
 const HEADER_FIELDS: Record<string, Field> = {
+  'артикул': 'sku',
   'id': 'id',
   'категория': 'category',
   'название': 'name',
@@ -138,6 +139,7 @@ function mapRowToImport(cells: string[], col: Partial<Record<Field, number>>): I
 
   const preorder = get('preorder');
   return {
+    sku: get('sku'),
     id,
     category: get('category'),
     name,
@@ -175,6 +177,23 @@ export function ImportDialog({ open, onOpenChange, existingProducts, onImport }:
       }
     });
     return keys;
+  }, [existingProducts]);
+
+  // Уже закреплённые артикулы существующих строк
+  const existingSkus = useMemo(() => {
+    const map = new Map<string, string>();
+    existingProducts.forEach(p => {
+      if (p.sizes.length === 0) {
+        const sku = p.skuBySize?.[''];
+        if (sku) map.set(String(p.id).trim(), sku);
+      } else {
+        p.sizes.forEach(size => {
+          const sku = p.skuBySize?.[size];
+          if (sku) map.set(makeKey(p.id, size), sku);
+        });
+      }
+    });
+    return map;
   }, [existingProducts]);
 
   // Stats
@@ -296,7 +315,7 @@ export function ImportDialog({ open, onOpenChange, existingProducts, onImport }:
         <DialogHeader>
           <DialogTitle className="text-gray-900">Импорт товаров</DialogTitle>
           <DialogDescription>
-            Загрузите CSV-файл в формате экспорта. Разделитель — точка с запятой (;). Колонка «Артикул» необязательна: артикул всегда пересчитывается из категории, капсулы, ID и размера.
+            Загрузите CSV-файл в формате экспорта. Разделитель — точка с запятой (;). Колонка «Артикул» необязательна: у новых товаров берётся из файла (или генерируется), а у существующих закреплённый артикул не меняется.
           </DialogDescription>
         </DialogHeader>
 
@@ -378,7 +397,7 @@ export function ImportDialog({ open, onOpenChange, existingProducts, onImport }:
                     const isUpdate = existingKeys.has(key);
                     return (
                       <TableRow key={i} className="text-sm">
-                        <TableCell className="py-1.5 font-mono text-xs text-gray-600">{buildSku(row, row.size)}</TableCell>
+                        <TableCell className="py-1.5 font-mono text-xs text-gray-600">{existingSkus.get(makeKey(row.id, row.size)) || row.sku || buildSku(row, row.size)}</TableCell>
                         <TableCell className="py-1.5 text-gray-900">{row.id}</TableCell>
                         <TableCell className="py-1.5 text-gray-900 max-w-[200px] truncate">{row.name}</TableCell>
                         <TableCell className="py-1.5 text-gray-600">{row.size || '—'}</TableCell>
