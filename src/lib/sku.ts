@@ -1,5 +1,10 @@
 const CODE_LENGTH = 3;
 
+/** Название целиком: только буквы и цифры, заглавными (Свитшоты → СВИТШОТЫ). */
+function fullCode(name: string): string {
+  return (name || '').replace(/[^\p{L}\p{N}]/gu, '').toUpperCase();
+}
+
 /** Код из названия: первые 3 буквы/цифры заглавными (Свитшоты → СВИ). */
 function nameCode(name: string): string {
   return (name || '')
@@ -9,7 +14,7 @@ function nameCode(name: string): string {
 }
 
 /**
- * Артикул = ID + КАТЕГОРИЯ + КАПСУЛА + РАЗМЕР без разделителей, например 1СВИБЕЛL.
+ * Артикул = ID + КАТЕГОРИЯ (полностью) + КАПСУЛА (3 буквы) + РАЗМЕР без разделителей, например 1СВИТШОТЫБЕЛL.
  * Для товара без размера артикул один, без суффикса размера.
  */
 export function buildSku(
@@ -18,7 +23,7 @@ export function buildSku(
 ): string {
   const sizePart = (size || '').replace(/\s+/g, '').toUpperCase();
   const idPart = String(product.id).replace(/\s+/g, '');
-  return idPart + nameCode(product.category || '') + nameCode(product.capsule || '') + sizePart;
+  return idPart + fullCode(product.category || '') + nameCode(product.capsule || '') + sizePart;
 }
 
 /** Сохранённый в БД артикул; если его ещё нет (старые данные) — вычисляем. */
