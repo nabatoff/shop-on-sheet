@@ -7,8 +7,10 @@ import { useToast } from '@/hooks/use-toast';
 import { getSupabase } from '@/lib/supabase';
 import type { Product } from '@/types/catalog';
 import { ORDER_CITIES } from '@/lib/orderCities';
+import { getSku } from '@/lib/sku';
 
 interface OrderItem {
+  sku?: string;
   productId: string;
   productName: string;
   size: string;
@@ -43,6 +45,7 @@ function mapRowsToOrders(rows: Record<string, unknown>[]): Order[] {
   return rows.map((row) => {
     const rawItems = (row.order_items as Record<string, unknown>[] | null) || [];
     const items: OrderItem[] = rawItems.map((i) => ({
+      sku: String(i.sku ?? ''),
       productId: String(i.product_id ?? ''),
       productName: String(i.product_name ?? ''),
       size: String(i.size ?? ''),
@@ -171,6 +174,7 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
           Город: order.customerCity || '',
           Статус: order.status,
           'Сумма заказа': order.total,
+          Артикул: '',
           Товар: '',
           Размер: '',
           Колво: '',
@@ -188,6 +192,7 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
           Город: order.customerCity || '',
           Статус: order.status,
           'Сумма заказа': order.total,
+          Артикул: item.sku || getSku(products.find(p => p.id === item.productId) ?? { id: item.productId }, item.size),
           Товар: item.productName,
           Размер: item.size,
           Колво: item.quantity,
@@ -250,7 +255,7 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
           customer_city,
           status,
           total,
-          order_items ( product_id, product_name, size, quantity, price )
+          order_items ( sku, product_id, product_name, size, quantity, price )
         `,
         )
         .order('created_at', { ascending: false });
@@ -665,7 +670,7 @@ export function OrderManager({ open, onOpenChange, products }: OrderManagerProps
                                     {item.productName || item.productId}
                                   </div>
                                   <div className="text-gray-500">
-                                    ID: {item.productId} • Размер: {item.size || '—'}
+                                    {item.sku ? `${item.sku} • ` : ''}ID: {item.productId} • Размер: {item.size || '—'}
                                   </div>
                                 </div>
                                 <div className="text-right pl-2 flex-shrink-0">

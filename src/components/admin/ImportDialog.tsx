@@ -21,6 +21,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Upload, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { ImportRow } from '@/types/admin';
+import { buildSku } from '@/lib/sku';
 
 export type { ImportRow };
 
@@ -85,29 +86,71 @@ function parseCSV(text: string): string[][] {
   return rows;
 }
 
-const EXPECTED_HEADERS = ['ID', 'Категория', 'Название', 'Размер', 'Остаток', 'Цена', 'Фото 1', 'Фото 2', 'Фото 3', 'Фото 4', 'Капсула', 'Описание', 'Предзаказ'];
+const EXPECTED_HEADERS = ['Артикул', 'ID', 'Категория', 'Название', 'Размер', 'Остаток', 'Цена', 'Фото 1', 'Фото 2', 'Фото 3', 'Фото 4', 'Капсула', 'Описание', 'Предзаказ'];
 
-function mapRowToImport(cells: string[]): ImportRow | null {
-  const id = cells[0]?.trim();
-  const name = cells[2]?.trim();
-  const price = parseFloat(cells[5]) || 0;
+// Старый формат (без «Артикул»): колонки идут строго в этом порядке
+const LEGACY_FIELDS = ['id', 'category', 'name', 'size', 'quantity', 'price', 'image1', 'image2', 'image3', 'image4', 'capsule', 'description', 'preorder'] as const;
+type Field = (typeof LEGACY_FIELDS)[number];
+
+const HEADER_FIELDS: Record<string, Field> = {
+  'id': 'id',
+  'категория': 'category',
+  'название': 'name',
+  'размер': 'size',
+  'остаток': 'quantity',
+  'количество': 'quantity',
+  'цена': 'price',
+  'фото 1': 'image1',
+  'изображение 1': 'image1',
+  'фото 2': 'image2',
+  'изображение 2': 'image2',
+  'фото 3': 'image3',
+  'изображение 3': 'image3',
+  'фото 4': 'image4',
+  'изображение 4': 'image4',
+  'капсула': 'capsule',
+  'описание': 'description',
+  'предзаказ': 'preorder',
+};
+
+/** Колонки определяем по заголовкам, чтобы лишняя колонка «Артикул» не сдвигала остальные. */
+function buildColumnIndex(headers: string[]): Partial<Record<Field, number>> {
+  const hasSku = headers.some(h => h.toLowerCase() === 'артикул');
+  const index: Partial<Record<Field, number>> = {};
+  if (!hasSku) {
+    LEGACY_FIELDS.forEach((f, i) => { index[f] = i; });
+    return index;
+  }
+  headers.forEach((h, i) => {
+    const field = HEADER_FIELDS[h.toLowerCase()];
+    if (field && index[field] === undefined) index[field] = i;
+  });
+  return index;
+}
+
+function mapRowToImport(cells: string[], col: Partial<Record<Field, number>>): ImportRow | null {
+  const get = (f: Field) => (col[f] === undefined ? '' : cells[col[f]!]?.trim() || '');
+  const id = get('id');
+  const name = get('name');
+  const price = parseFloat(get('price')) || 0;
 
   if (!id || !name) return null;
 
+  const preorder = get('preorder');
   return {
     id,
-    category: cells[1]?.trim() || '',
+    category: get('category'),
     name,
-    size: cells[3]?.trim() || '',
-    quantity: parseInt(cells[4]) || 0,
+    size: get('size'),
+    quantity: parseInt(get('quantity')) || 0,
     price,
-    image1: cells[6]?.trim() || '',
-    image2: cells[7]?.trim() || '',
-    image3: cells[8]?.trim() || '',
-    image4: cells[9]?.trim() || '',
-    capsule: cells[10]?.trim() || '',
-    description: cells[11]?.trim() || '',
-    preorder: (cells[12]?.trim() || '').toLowerCase() === 'да' || cells[12]?.trim() === 'true',
+    image1: get('image1'),
+    image2: get('image2'),
+    image3: get('image3'),
+    image4: get('image4'),
+    capsule: get('capsule'),
+    description: get('description'),
+    preorder: preorder.toLowerCase() === 'да' || preorder === 'true',
   };
 }
 
@@ -172,12 +215,13 @@ export function ImportDialog({ open, onOpenChange, existingProducts, onImport }:
           return;
         }
 
+        const columnIndex = buildColumnIndex(headers);
         const dataRows = rows.slice(1);
         const parsed: ImportRow[] = [];
         const errors: string[] = [];
 
         dataRows.forEach((cells, idx) => {
-          const row = mapRowToImport(cells);
+          const row = mapRowToImport(cells, columnIndex);
           if (row) {
             parsed.push(row);
           } else {
@@ -252,7 +296,7 @@ export function ImportDialog({ open, onOpenChange, existingProducts, onImport }:
         <DialogHeader>
           <DialogTitle className="text-gray-900">Импорт товаров</DialogTitle>
           <DialogDescription>
-            Загрузите CSV-файл в формате экспорта. Разделитель — точка с запятой (;).
+            Загрузите CSV-файл в формате экспорта. Разделитель — точка с запятой (;). Колонка «Артикул» необязательна: артикул всегда пересчитывается из категории, капсулы, ID и размера.
           </DialogDescription>
         </DialogHeader>
 
@@ -319,6 +363,7 @@ export function ImportDialog({ open, onOpenChange, existingProducts, onImport }:
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
+                    <TableHead className="text-gray-500 text-xs">Артикул</TableHead>
                     <TableHead className="text-gray-500 text-xs">ID</TableHead>
                     <TableHead className="text-gray-500 text-xs">Название</TableHead>
                     <TableHead className="text-gray-500 text-xs">Размер</TableHead>
@@ -333,6 +378,7 @@ export function ImportDialog({ open, onOpenChange, existingProducts, onImport }:
                     const isUpdate = existingKeys.has(key);
                     return (
                       <TableRow key={i} className="text-sm">
+                        <TableCell className="py-1.5 font-mono text-xs text-gray-600">{buildSku(row, row.size)}</TableCell>
                         <TableCell className="py-1.5 text-gray-900">{row.id}</TableCell>
                         <TableCell className="py-1.5 text-gray-900 max-w-[200px] truncate">{row.name}</TableCell>
                         <TableCell className="py-1.5 text-gray-600">{row.size || '—'}</TableCell>
@@ -348,7 +394,7 @@ export function ImportDialog({ open, onOpenChange, existingProducts, onImport }:
                   })}
                   {parsedRows.length > 20 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-gray-400 text-sm py-2">
+                      <TableCell colSpan={7} className="text-center text-gray-400 text-sm py-2">
                         ... и ещё {parsedRows.length - 20} строк
                       </TableCell>
                     </TableRow>
