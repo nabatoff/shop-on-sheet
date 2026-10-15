@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Product } from '@/types/catalog';
+import { getSku } from '@/lib/sku';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
   Table,
@@ -129,7 +130,10 @@ export function ProductsTable({
       const query = debouncedSearchQuery.toLowerCase();
       result = result.filter(product => 
         String(product.id ?? '').toLowerCase().includes(query) ||
-        String(product.name ?? '').toLowerCase().includes(query)
+        String(product.name ?? '').toLowerCase().includes(query) ||
+        (product.sizes.length > 0 ? product.sizes : [undefined]).some(size =>
+          getSku(product, size).toLowerCase().includes(query)
+        )
       );
     }
     
@@ -217,6 +221,7 @@ export function ProductsTable({
     const dataToExport: Array<Record<string, string | number>> = [];
 
     const pushRow = (
+      sku: string,
       id: string | number,
       category: string,
       name: string,
@@ -229,6 +234,7 @@ export function ProductsTable({
       preorder: boolean
     ) => {
       dataToExport.push({
+        Артикул: sku,
         ID: id,
         Категория: category || '',
         Название: name,
@@ -251,6 +257,7 @@ export function ProductsTable({
         product.sizes.forEach(size => {
           const stock = stockBySize[size] || 0;
           pushRow(
+            getSku(product, size),
             product.id,
             product.category || '',
             product.name,
@@ -265,6 +272,7 @@ export function ProductsTable({
         });
       } else {
         pushRow(
+          getSku(product),
           product.id,
           product.category || '',
           product.name,
@@ -508,6 +516,7 @@ export function ProductsTable({
                       <TableHead className="text-gray-500">Категория</TableHead>
                       <TableHead className="text-gray-500">Капсула</TableHead>
                       <TableHead className="text-gray-500">Размеры / Остатки</TableHead>
+                      <TableHead className="text-gray-500">Артикул</TableHead>
                       <TableHead className="text-gray-500">Цена</TableHead>
                       <TableHead className="text-gray-500 w-[150px]"></TableHead>
                     </TableRow>
@@ -581,6 +590,15 @@ export function ProductsTable({
                                 Остаток: {product.stock ?? 0}
                               </Badge>
                             )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5 font-mono text-xs text-gray-600">
+                            {product.sizes.length > 0
+                              ? product.sizes.map((size) => (
+                                  <span key={size}>{getSku(product, size)}</span>
+                                ))
+                              : <span>{getSku(product)}</span>}
                           </div>
                         </TableCell>
                         <TableCell className="font-medium text-gray-900">

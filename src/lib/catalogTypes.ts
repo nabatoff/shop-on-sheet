@@ -16,4 +16,5 @@ export interface MerchLineRow {
   preorder: boolean;
   limited_edition: boolean;
   disabled: boolean;
+  sku: string;
 }

@@ -11,6 +11,8 @@ export interface Product {
   stockBySize?: Record<string, number>;
   preorder?: boolean;
   preorderBySize?: Record<string, boolean>;
+  /** Сохранённые артикулы: размер → артикул ('' — товар без размера) */
+  skuBySize?: Record<string, string>;
   limitedEdition?: boolean;
   disabled?: boolean;
 }

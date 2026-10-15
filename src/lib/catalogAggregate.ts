@@ -20,6 +20,7 @@ interface RawProduct {
   preorder: boolean;
   limitedEdition?: boolean;
   disabled?: boolean;
+  sku: string;
 }
 
 export function merchRowsToRawProducts(rows: MerchLineRow[]): RawProduct[] {
@@ -39,17 +40,19 @@ export function merchRowsToRawProducts(rows: MerchLineRow[]): RawProduct[] {
     preorder: !!row.preorder,
     limitedEdition: !!row.limited_edition,
     disabled: row.disabled ? true : undefined,
+    sku: String(row.sku || '').trim(),
   }));
 }
 
 function groupProductsByID(rawProducts: RawProduct[], hideDisabled: boolean): Product[] {
-  const grouped = new Map<string, Product & { _stockBySize: Map<string, number>; _preorderBySize: Map<string, boolean> }>();
+  const grouped = new Map<string, Product & { _stockBySize: Map<string, number>; _preorderBySize: Map<string, boolean>; _skuBySize: Map<string, string> }>();
 
   for (const raw of rawProducts) {
     if (!raw.id) continue;
 
     if (grouped.has(raw.id)) {
       const existing = grouped.get(raw.id)!;
+      existing._skuBySize.set(raw.size, raw.sku);
       if (raw.size && !existing.sizes.includes(raw.size)) {
         existing.sizes.push(raw.size);
       }
@@ -70,6 +73,7 @@ function groupProductsByID(rawProducts: RawProduct[], hideDisabled: boolean): Pr
       if (raw.size) preorderMap.set(raw.size, raw.preorder === true);
 
       grouped.set(raw.id, {
+        _skuBySize: new Map([[raw.size, raw.sku]]),
         id: raw.id,
         name: raw.name,
         price: raw.price,
@@ -88,8 +92,9 @@ function groupProductsByID(rawProducts: RawProduct[], hideDisabled: boolean): Pr
     }
   }
 
-  let list = Array.from(grouped.values()).map(({ _stockBySize, _preorderBySize, ...product }) => ({
+  let list = Array.from(grouped.values()).map(({ _stockBySize, _preorderBySize, _skuBySize, ...product }) => ({
     ...product,
+    skuBySize: Object.fromEntries(_skuBySize),
     stockBySize: Object.fromEntries(_stockBySize),
     preorderBySize: Object.fromEntries(_preorderBySize),
   }));
