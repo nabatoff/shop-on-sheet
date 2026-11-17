@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ImageLightbox } from '@/components/catalog/ImageLightbox';
-import { Package, RefreshCw, Search, Copy, Edit, Plus, ArrowUp, ArrowDown, Trash2, ChevronLeft, ChevronRight, Download, Upload, Eye, EyeOff } from 'lucide-react';
+import { Package, RefreshCw, Search, Copy, Edit, Plus, ArrowUp, ArrowDown, Trash2, ChevronLeft, ChevronRight, Download, Upload, Eye, EyeOff, Hash } from 'lucide-react';
 import { ImportDialog, ImportRow } from '@/components/admin/ImportDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +47,7 @@ interface ProductsTableProps {
   onAddProduct?: () => void;
   onDeleteProduct?: (product: Product) => void;
   onToggleDisabled?: (product: Product) => void;
+  onRegenerateSku?: (product: Product) => void;
   onImport?: (rows: ImportRow[]) => Promise<boolean>;
   lastUpdatedAt?: number;
 }
@@ -64,6 +65,7 @@ export function ProductsTable({
   onAddProduct,
   onDeleteProduct,
   onToggleDisabled,
+  onRegenerateSku,
   onImport,
   lastUpdatedAt,
 }: ProductsTableProps) {
@@ -625,6 +627,20 @@ export function ProductsTable({
                               aria-label={`Копировать ${product.name}`}
                             >
                             <Copy className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (window.confirm(`Пересоздать артикулы товара "${product.name}" по текущей категории, капсуле и размерам? Старые артикулы будут заменены.`)) {
+                                  onRegenerateSku?.(product);
+                                }
+                              }}
+                              className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 min-h-9 min-w-9 p-0 touch-manipulation"
+                              title="Пересоздать артикул"
+                              aria-label={`Пересоздать артикул ${product.name}`}
+                            >
+                              <Hash className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost"

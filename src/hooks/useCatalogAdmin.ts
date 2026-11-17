@@ -271,6 +271,23 @@ export function useCatalogAdmin() {
     }
   };
 
+  const regenerateSku = async (productId: string): Promise<boolean> => {
+    const sb = getSupabase();
+    setError(null);
+    try {
+      const { error: rpcErr } = await sb.rpc('regenerate_merch_sku', { p_product_id: productId });
+      if (rpcErr) {
+        setError(rpcErr.message);
+        return false;
+      }
+      await adminLog('Перегенерация артикула', `ID: ${productId}`, 'Успех');
+      return true;
+    } catch {
+      setError('Ошибка при перегенерации артикула');
+      return false;
+    }
+  };
+
   const bulkImport = async (rows: ImportRow[]): Promise<boolean> => {
     const sb = getSupabase();
     setIsSubmitting(true);
@@ -559,6 +576,7 @@ export function useCatalogAdmin() {
     updateProduct,
     deleteProduct,
     toggleDisabled,
+    regenerateSku,
     bulkImport,
     fetchProducts,
     fetchCategories,

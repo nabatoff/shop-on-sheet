@@ -87,7 +87,7 @@ async function loadIsAdmin(): Promise<boolean> {
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-  const { deleteProduct, toggleDisabled, bulkImport, fetchProducts, fetchCategories, fetchSizes, fetchCapsules, fetchLogs, clearLogs } = useCatalogAdmin();
+  const { deleteProduct, toggleDisabled, regenerateSku, bulkImport, fetchProducts, fetchCategories, fetchSizes, fetchCapsules, fetchLogs, clearLogs } = useCatalogAdmin();
   const { toast } = useToast();
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
@@ -292,6 +292,18 @@ export default function Admin() {
     }
   };
 
+  // Перегенерация артикулов товара по текущим данным
+  const handleRegenerateSku = async (product: Product) => {
+    const success = await regenerateSku(product.id);
+    if (success) {
+      setLocalProducts(await fetchProducts());
+      setLastUpdatedAt(Date.now());
+      toast({ title: 'Артикулы обновлены', description: `Товар "${product.name}"` });
+    } else {
+      toast({ title: 'Ошибка', description: 'Не удалось перегенерировать артикулы', variant: 'destructive' });
+    }
+  };
+
   // Импорт товаров
   const handleImport = async (rows: ImportRow[]): Promise<boolean> => {
     const success = await bulkImport(rows);
@@ -444,6 +456,7 @@ export default function Admin() {
             onCopyProduct={handleCopyProduct}
             onDeleteProduct={handleDeleteProduct}
             onToggleDisabled={handleToggleDisabled}
+            onRegenerateSku={handleRegenerateSku}
             onImport={handleImport}
             lastUpdatedAt={lastUpdatedAt}
           />
